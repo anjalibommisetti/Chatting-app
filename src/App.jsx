@@ -13,8 +13,6 @@ import BottomNav from './components/Navigation/BottomNav';
 // Auth
 import WelcomeScreen from './components/Auth/WelcomeScreen';
 import LoginModal from './components/Auth/LoginModal';
-import SignupModal from './components/Auth/SignupModal';
-import ForgotPasswordModal from './components/Auth/ForgotPasswordModal';
 
 // Dashboard & Chat
 import ChatList from './components/Dashboard/ChatList';
@@ -22,6 +20,7 @@ import ChatArea from './components/Chat/ChatArea';
 import GroupInfoModal from './components/Chat/GroupInfoModal';
 import CreateGroupModal from './components/Groups/CreateGroupModal';
 import JoinGroupModal from './components/Groups/JoinGroupModal';
+import NewChatByPhoneModal from './components/Contacts/NewChatByPhoneModal';
 
 // Calls
 import CallModal from './components/Calls/CallModal';
@@ -41,11 +40,10 @@ export default function App() {
 
   // Modals
   const [showLogin, setShowLogin] = useState(false);
-  const [showSignup, setShowSignup] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showNewChatByPhone, setShowNewChatByPhone] = useState(false);
 
   // Subscribe to store updates
   useEffect(() => {
@@ -73,32 +71,6 @@ export default function App() {
         <LoginModal
           isOpen={showLogin}
           onClose={() => setShowLogin(false)}
-          onSwitchToSignup={() => {
-            setShowLogin(false);
-            setShowSignup(true);
-          }}
-          onSwitchToForgot={() => {
-            setShowLogin(false);
-            setShowForgot(true);
-          }}
-        />
-
-        <SignupModal
-          isOpen={showSignup}
-          onClose={() => setShowSignup(false)}
-          onSwitchToLogin={() => {
-            setShowSignup(false);
-            setShowLogin(true);
-          }}
-        />
-
-        <ForgotPasswordModal
-          isOpen={showForgot}
-          onClose={() => setShowForgot(false)}
-          onBackToLogin={() => {
-            setShowForgot(false);
-            setShowLogin(true);
-          }}
         />
       </div>
     );
@@ -132,6 +104,7 @@ export default function App() {
                 onSelectConversation={(id) => setActiveConversationId(id)}
                 onOpenCreateGroup={() => setShowCreateGroup(true)}
                 onOpenJoinGroup={() => setShowJoinGroup(true)}
+                onOpenNewChatByPhone={() => setShowNewChatByPhone(true)}
                 onStartCall={(callPayload) => calling.startCall(callPayload)}
               />
             </div>
@@ -191,6 +164,15 @@ export default function App() {
       />
 
       {/* Modals */}
+      <NewChatByPhoneModal
+        isOpen={showNewChatByPhone}
+        onClose={() => setShowNewChatByPhone(false)}
+        onChatCreated={(convId) => {
+          setActiveConversationId(convId);
+          setCurrentTab('chats');
+        }}
+      />
+
       <CreateGroupModal
         isOpen={showCreateGroup}
         onClose={() => setShowCreateGroup(false)}

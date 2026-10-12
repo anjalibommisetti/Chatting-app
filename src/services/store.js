@@ -1,195 +1,51 @@
 // ==============================================================================
-// VibeConnect — Core State Management, Persistence & Business Logic
+// VibeConnect — Core State Management, Mobile Number Discovery & Request Engine
 // ==============================================================================
 
 import { sound } from './audio';
 
-// Pre-seeded Demo Friends & Users
-const INITIAL_USERS = [
+// Pre-registered Directory of Sample Mobile Numbers for Local Testing
+// In Supabase, this queries the `profiles` table directly.
+const REGISTERED_USERS = [
   {
     id: 'usr_anju',
-    email: 'anju@vibeconnect.io',
+    phone: '9876543210',
     username: 'anju',
     nickname: 'Anju',
     avatar: '🦊',
-    bio: 'Building awesome apps with VibeConnect ✨',
+    bio: 'Using VibeConnect ✨',
     status: 'online',
     lastSeen: 'Active now'
   },
   {
     id: 'usr_priya',
-    email: 'priya@vibeconnect.io',
-    username: 'priya_k',
+    phone: '9876543211',
+    username: 'priya',
     nickname: 'Priya',
     avatar: '🌸',
-    bio: 'Coffee, code, and good vibes ☕',
+    bio: 'Coffee & Code ☕',
     status: 'online',
     lastSeen: 'Active now'
   },
   {
     id: 'usr_alex',
-    email: 'alex@vibeconnect.io',
-    username: 'alex_dev',
+    phone: '9876543212',
+    username: 'alex',
     nickname: 'Alex',
     avatar: '⚡',
-    bio: 'Always up for a quick call 🎧',
+    bio: 'Available for video calls 🎧',
     status: 'online',
     lastSeen: 'Active now'
   },
   {
     id: 'usr_sam',
-    email: 'sam@vibeconnect.io',
+    phone: '9876543213',
     username: 'sammy',
     nickname: 'Sammy',
     avatar: '🚀',
-    bio: 'Exploring new technologies!',
+    bio: 'Exploring tech!',
     status: 'away',
     lastSeen: '10m ago'
-  },
-  {
-    id: 'usr_jordan',
-    email: 'jordan@vibeconnect.io',
-    username: 'jordan_b',
-    nickname: 'Jordy',
-    avatar: '🦁',
-    bio: 'Design enthusiast & gamer 🎮',
-    status: 'offline',
-    lastSeen: '1h ago'
-  }
-];
-
-const INITIAL_GROUPS = [
-  {
-    id: 'grp_vibesquad',
-    name: 'Vibe Squad 💜',
-    avatar: '✨',
-    creatorId: 'usr_anju',
-    inviteCode: 'VIBE-779',
-    maxMembers: 5,
-    members: ['usr_anju', 'usr_priya', 'usr_alex'], // 3 members (limit is 5)
-    createdAt: Date.now() - 86400000 * 3
-  }
-];
-
-const INITIAL_CONVERSATIONS = [
-  {
-    id: 'conv_priya',
-    type: 'direct',
-    participantIds: ['usr_anju', 'usr_priya'],
-    groupId: null,
-    isPinned: true,
-    isMuted: false,
-    isArchived: false,
-    unreadCount: 0,
-    lastMessagePreview: 'Hey Anju! Are you free for a video call?',
-    lastMessageTime: Date.now() - 1000 * 60 * 5
-  },
-  {
-    id: 'conv_vibesquad',
-    type: 'group',
-    participantIds: ['usr_anju', 'usr_priya', 'usr_alex'],
-    groupId: 'grp_vibesquad',
-    isPinned: false,
-    isMuted: false,
-    isArchived: false,
-    unreadCount: 1,
-    lastMessagePreview: 'Alex: Shared the presentation slides!',
-    lastMessageTime: Date.now() - 1000 * 60 * 30
-  },
-  {
-    id: 'conv_alex',
-    type: 'direct',
-    participantIds: ['usr_anju', 'usr_alex'],
-    groupId: null,
-    isPinned: false,
-    isMuted: false,
-    isArchived: false,
-    unreadCount: 0,
-    lastMessagePreview: 'Voice call ended (14m 20s)',
-    lastMessageTime: Date.now() - 1000 * 60 * 180
-  }
-];
-
-const INITIAL_MESSAGES = [
-  {
-    id: 'msg_1',
-    conversationId: 'conv_priya',
-    senderId: 'usr_priya',
-    text: 'Hey Anju! How is your day going?',
-    timestamp: Date.now() - 1000 * 60 * 20,
-    replyTo: null,
-    reactions: { '❤️': ['usr_anju'] },
-    isEdited: false
-  },
-  {
-    id: 'msg_2',
-    conversationId: 'conv_priya',
-    senderId: 'usr_anju',
-    text: 'Hey Priya! Pretty good, working on VibeConnect right now.',
-    timestamp: Date.now() - 1000 * 60 * 15,
-    replyTo: null,
-    reactions: {},
-    isEdited: false
-  },
-  {
-    id: 'msg_3',
-    conversationId: 'conv_priya',
-    senderId: 'usr_priya',
-    text: 'Awesome! Are you free for a video call?',
-    timestamp: Date.now() - 1000 * 60 * 5,
-    replyTo: null,
-    reactions: { '👍': ['usr_anju'] },
-    isEdited: false
-  },
-  {
-    id: 'msg_4',
-    conversationId: 'conv_vibesquad',
-    senderId: 'usr_anju',
-    text: 'Welcome everyone to the private group! Remember we keep it to a strict max of 5 members for privacy.',
-    timestamp: Date.now() - 1000 * 60 * 60,
-    replyTo: null,
-    reactions: { '🔥': ['usr_alex', 'usr_priya'] },
-    isEdited: false
-  },
-  {
-    id: 'msg_5',
-    conversationId: 'conv_vibesquad',
-    senderId: 'usr_alex',
-    text: 'Shared the presentation slides!',
-    timestamp: Date.now() - 1000 * 60 * 30,
-    replyTo: null,
-    reactions: {},
-    isEdited: false
-  }
-];
-
-const INITIAL_CALL_LOGS = [
-  {
-    id: 'call_1',
-    peerId: 'usr_priya',
-    groupId: null,
-    callType: 'video',
-    status: 'completed',
-    duration: 520, // seconds
-    timestamp: Date.now() - 1000 * 60 * 120
-  },
-  {
-    id: 'call_2',
-    peerId: 'usr_alex',
-    groupId: null,
-    callType: 'voice',
-    status: 'completed',
-    duration: 860,
-    timestamp: Date.now() - 1000 * 60 * 180
-  },
-  {
-    id: 'call_3',
-    peerId: 'usr_sam',
-    groupId: null,
-    callType: 'video',
-    status: 'missed',
-    duration: 0,
-    timestamp: Date.now() - 1000 * 60 * 600
   }
 ];
 
@@ -198,18 +54,18 @@ class StoreService {
     this.listeners = new Set();
     this.channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('vibeconnect_sync') : null;
     
-    // Load from local storage or initialize
-    this.currentUser = this.loadStorage('vibe_current_user', INITIAL_USERS[0]);
-    this.users = this.loadStorage('vibe_users', INITIAL_USERS);
-    this.groups = this.loadStorage('vibe_groups', INITIAL_GROUPS);
-    this.conversations = this.loadStorage('vibe_conversations', INITIAL_CONVERSATIONS);
-    this.messages = this.loadStorage('vibe_messages', INITIAL_MESSAGES);
-    this.callLogs = this.loadStorage('vibe_call_logs', INITIAL_CALL_LOGS);
+    // Clean initial state — NO fake random conversations or fake dummy messages!
+    this.currentUser = this.loadStorage('vibe_current_user', REGISTERED_USERS[0]);
+    this.users = this.loadStorage('vibe_users', REGISTERED_USERS);
+    this.groups = this.loadStorage('vibe_groups', []);
+    this.conversations = this.loadStorage('vibe_conversations', []);
+    this.messages = this.loadStorage('vibe_messages', []);
+    this.callLogs = this.loadStorage('vibe_call_logs', []);
+    this.chatRequests = this.loadStorage('vibe_chat_requests', []);
     this.friendNicknames = this.loadStorage('vibe_friend_nicknames', {}); // friendId -> custom nickname
     this.settings = this.loadStorage('vibe_settings', {
       readReceipts: true,
       soundAlerts: true,
-      lastSeenPrivacy: 'everyone',
       theme: 'dark'
     });
 
@@ -244,6 +100,7 @@ class StoreService {
     this.saveStorage('vibe_conversations', this.conversations);
     this.saveStorage('vibe_messages', this.messages);
     this.saveStorage('vibe_call_logs', this.callLogs);
+    this.saveStorage('vibe_chat_requests', this.chatRequests);
     this.saveStorage('vibe_friend_nicknames', this.friendNicknames);
     this.saveStorage('vibe_settings', this.settings);
 
@@ -261,6 +118,7 @@ class StoreService {
     this.conversations = this.loadStorage('vibe_conversations', this.conversations);
     this.messages = this.loadStorage('vibe_messages', this.messages);
     this.callLogs = this.loadStorage('vibe_call_logs', this.callLogs);
+    this.chatRequests = this.loadStorage('vibe_chat_requests', this.chatRequests);
     this.friendNicknames = this.loadStorage('vibe_friend_nicknames', this.friendNicknames);
     this.settings = this.loadStorage('vibe_settings', this.settings);
     this.listeners.forEach(fn => fn());
@@ -272,47 +130,39 @@ class StoreService {
   }
 
   // ============================================================================
-  // AUTHENTICATION & PROFILES
+  // PHONE NUMBER AUTH & REGISTRATION
   // ============================================================================
 
-  signUp({ email, password, username, nickname, avatar }) {
-    const existing = this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-      throw new Error('An account with this email already exists.');
+  loginWithPhone({ phone, name, avatar }) {
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      throw new Error('Please enter a valid 10-digit mobile number.');
     }
 
-    const newUser = {
-      id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-      email: email.trim(),
-      username: username.trim().toLowerCase(),
-      nickname: (nickname || username).trim(),
-      avatar: avatar || '🦊',
-      bio: 'New member of VibeConnect ✨',
-      status: 'online',
-      lastSeen: 'Active now'
-    };
+    // Check if phone already registered
+    let user = this.users.find(u => u.phone === cleanPhone);
 
-    this.users.push(newUser);
-    this.currentUser = newUser;
-    this.notify();
-    return newUser;
-  }
-
-  logIn({ email, password }) {
-    const user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
     if (!user) {
-      // Auto-create convenience for testing or demo logins
-      return this.signUp({
-        email,
-        password,
-        username: email.split('@')[0],
-        nickname: email.split('@')[0],
-        avatar: '🦊'
-      });
+      // Create new user profile with this phone number
+      const nickname = (name || 'User ' + cleanPhone.slice(-4)).trim();
+      user = {
+        id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        phone: cleanPhone,
+        username: nickname.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user' + cleanPhone.slice(-4),
+        nickname: nickname,
+        avatar: avatar || '🦊',
+        bio: 'Using VibeConnect ✨',
+        status: 'online',
+        lastSeen: 'Active now'
+      };
+      this.users.push(user);
+    } else {
+      user.status = 'online';
+      user.lastSeen = 'Active now';
+      if (name && name.trim()) user.nickname = name.trim();
+      if (avatar) user.avatar = avatar;
     }
 
-    user.status = 'online';
-    user.lastSeen = 'Active now';
     this.currentUser = user;
     this.notify();
     return user;
@@ -343,12 +193,130 @@ class StoreService {
     if (avatar !== undefined) this.currentUser.avatar = avatar;
     if (status !== undefined) this.currentUser.status = status;
 
-    // Update in user list
     const idx = this.users.findIndex(u => u.id === this.currentUser.id);
     if (idx !== -1) {
       this.users[idx] = { ...this.currentUser };
     }
     this.notify();
+  }
+
+  // ============================================================================
+  // FIND BY MOBILE NUMBER & MESSAGE REQUESTS
+  // ============================================================================
+
+  findUserByPhone(phone) {
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone) return null;
+    return this.users.find(u => u.phone === cleanPhone) || null;
+  }
+
+  sendChatRequest(targetPhone) {
+    if (!this.currentUser) throw new Error('Please log in first.');
+
+    const cleanPhone = (targetPhone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      throw new Error('Please enter a valid 10-digit mobile number.');
+    }
+
+    if (this.currentUser.phone === cleanPhone) {
+      throw new Error('You cannot send a chat request to your own mobile number.');
+    }
+
+    const targetUser = this.findUserByPhone(cleanPhone);
+    if (!targetUser) {
+      throw new Error(`No user registered with mobile number "${cleanPhone}". Ask your friend to open VibeConnect and enter their number!`);
+    }
+
+    // Check if conversation already exists
+    const existingConv = this.conversations.find(c => 
+      c.type === 'direct' && 
+      c.participantIds.includes(this.currentUser.id) && 
+      c.participantIds.includes(targetUser.id)
+    );
+    if (existingConv) {
+      return { status: 'already_connected', conversation: existingConv };
+    }
+
+    // Check if request already pending
+    const existingReq = this.chatRequests.find(r => 
+      r.status === 'pending' && 
+      ((r.senderId === this.currentUser.id && r.receiverId === targetUser.id) ||
+       (r.senderId === targetUser.id && r.receiverId === this.currentUser.id))
+    );
+    if (existingReq) {
+      throw new Error(`A chat request with ${targetUser.nickname} is already pending!`);
+    }
+
+    const newReq = {
+      id: 'req_' + Date.now(),
+      senderId: this.currentUser.id,
+      receiverId: targetUser.id,
+      status: 'pending',
+      createdAt: Date.now()
+    };
+
+    this.chatRequests.unshift(newReq);
+    this.notify();
+    return { status: 'sent', targetUser };
+  }
+
+  acceptChatRequest(requestId) {
+    const req = this.chatRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    req.status = 'accepted';
+
+    // Create 1-on-1 direct conversation between the two users!
+    const sender = this.getUserById(req.senderId);
+    const receiver = this.getUserById(req.receiverId);
+
+    let conv = this.conversations.find(c => 
+      c.type === 'direct' && 
+      c.participantIds.includes(req.senderId) && 
+      c.participantIds.includes(req.receiverId)
+    );
+
+    if (!conv) {
+      conv = {
+        id: 'conv_' + Date.now() + '_' + req.senderId,
+        type: 'direct',
+        participantIds: [req.senderId, req.receiverId],
+        groupId: null,
+        isPinned: false,
+        isMuted: false,
+        isArchived: false,
+        unreadCount: 0,
+        lastMessagePreview: 'Chat request accepted! Say hello 👋',
+        lastMessageTime: Date.now()
+      };
+      this.conversations.unshift(conv);
+
+      // Add a system welcome message
+      this.messages.push({
+        id: 'msg_welcome_' + Date.now(),
+        conversationId: conv.id,
+        senderId: req.senderId,
+        text: '👋 Hey! Chat request accepted. We can now chat, voice call, and video call.',
+        timestamp: Date.now(),
+        replyTo: null,
+        reactions: {},
+        isEdited: false
+      });
+    }
+
+    sound.playCallConnected();
+    this.notify();
+    return conv;
+  }
+
+  declineChatRequest(requestId) {
+    this.chatRequests = this.chatRequests.filter(r => r.id !== requestId);
+    this.notify();
+  }
+
+  getPendingRequestsForMe() {
+    if (!this.currentUser) return [];
+    return this.chatRequests.filter(r => r.receiverId === this.currentUser.id && r.status === 'pending');
   }
 
   // ============================================================================
@@ -366,12 +334,10 @@ class StoreService {
 
   getDisplayName(user) {
     if (!user) return 'Unknown';
-    // 1. Check if current user gave this friend a custom personal nickname
     if (this.friendNicknames[user.id]) {
       return this.friendNicknames[user.id];
     }
-    // 2. Fall back to user's own nickname or username
-    return user.nickname || user.username || 'User';
+    return user.nickname || user.username || user.phone || 'User';
   }
 
   getUserById(id) {
@@ -385,10 +351,8 @@ class StoreService {
   createGroup({ name, avatar, memberIds }) {
     if (!this.currentUser) throw new Error('You must be logged in.');
 
-    // Ensure creator is in the members list
     const distinctMembers = Array.from(new Set([this.currentUser.id, ...(memberIds || [])]));
 
-    // STRICT 5 MEMBER LIMIT ENFORCEMENT
     if (distinctMembers.length > 5) {
       throw new Error('Group limit exceeded! Private groups cannot have more than 5 members (including creator).');
     }
@@ -412,7 +376,6 @@ class StoreService {
 
     this.groups.push(newGroup);
 
-    // Create corresponding group conversation
     const newConv = {
       id: 'conv_' + newGroup.id,
       type: 'group',
@@ -422,7 +385,7 @@ class StoreService {
       isMuted: false,
       isArchived: false,
       unreadCount: 0,
-      lastMessagePreview: `Group created by ${this.currentUser.nickname}`,
+      lastMessagePreview: `Private group created by ${this.currentUser.nickname}`,
       lastMessageTime: Date.now()
     };
     this.conversations.unshift(newConv);
@@ -440,7 +403,6 @@ class StoreService {
       throw new Error('Invalid invite code! No group found with this code.');
     }
 
-    // Check if already a member
     if (group.members.includes(this.currentUser.id)) {
       return group;
     }
@@ -452,7 +414,6 @@ class StoreService {
 
     group.members.push(this.currentUser.id);
 
-    // Update conversation participants
     const conv = this.conversations.find(c => c.groupId === group.id);
     if (conv && !conv.participantIds.includes(this.currentUser.id)) {
       conv.participantIds.push(this.currentUser.id);
@@ -468,7 +429,6 @@ class StoreService {
 
     if (group.members.includes(userId)) return group;
 
-    // STRICT 5-MEMBER ENFORCEMENT
     if (group.members.length >= 5) {
       throw new Error('Cannot add member: This group already has 5 members (maximum allowed).');
     }
@@ -518,7 +478,7 @@ class StoreService {
         isMuted: false,
         isArchived: false,
         unreadCount: 0,
-        lastMessagePreview: 'Started a new conversation',
+        lastMessagePreview: 'Started chat',
         lastMessageTime: Date.now()
       };
       this.conversations.unshift(conv);
@@ -546,12 +506,10 @@ class StoreService {
 
     this.messages.push(newMsg);
 
-    // Update conversation metadata
     const conv = this.conversations.find(c => c.id === conversationId);
     if (conv) {
       conv.lastMessagePreview = cleanText || (attachment ? `📎 ${attachment.name || 'Attachment'}` : 'New message');
       conv.lastMessageTime = Date.now();
-      // Move conversation to top
       this.conversations = [conv, ...this.conversations.filter(c => c.id !== conversationId)];
     }
 
@@ -635,8 +593,8 @@ class StoreService {
       id: 'call_' + Date.now(),
       peerId: peerId || null,
       groupId: groupId || null,
-      callType, // 'voice' | 'video'
-      status, // 'completed' | 'missed' | 'declined'
+      callType,
+      status,
       duration,
       timestamp: Date.now()
     };
