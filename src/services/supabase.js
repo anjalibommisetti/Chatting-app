@@ -4,8 +4,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_URL = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('vibe_supabase_url') || '';
-const DEFAULT_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('vibe_supabase_anon_key') || '';
+const FALLBACK_URL = 'https://jfqujqsvivilnwcgtizh.supabase.co';
+const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmcXVqcXN2aXZpbG53Y2d0aXpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NzUxMDcsImV4cCI6MjEwNzQ1MTEwN30.hWVuE5hGoL4zVE2bnwuSwWb4vkVZT2iiPsnJ4IvVEtc';
+
+const DEFAULT_URL = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('vibe_supabase_url') || FALLBACK_URL;
+const DEFAULT_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('vibe_supabase_anon_key') || FALLBACK_KEY;
 
 let supabaseClient = null;
 

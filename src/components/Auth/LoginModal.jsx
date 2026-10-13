@@ -16,7 +16,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -32,7 +32,7 @@ export default function LoginModal({ isOpen, onClose }) {
     }
 
     try {
-      store.loginWithPhone({
+      await store.loginWithPhone({
         phone: cleanPhone,
         name: name.trim(),
         avatar

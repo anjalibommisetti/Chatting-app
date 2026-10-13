@@ -1,28 +1,66 @@
-// ==============================================================================
-// VibeConnect — Connect by Mobile Number & Send Chat Request Modal
-// ==============================================================================
-
-import React, { useState } from 'react';
-import { Phone, Search, UserCheck, X, Send, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Phone, Search, UserCheck, X, Send, AlertCircle, CheckCircle2, Copy, Check, Loader2 } from 'lucide-react';
 import { store } from '../../services/store';
 
 export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [matchedUser, setMatchedUser] = useState(null);
+
+  const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPhoneNumber('');
+      setError('');
+      setSuccess('');
+      setMatchedUser(null);
+      return;
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (cleanPhone.length < 10) {
+      setMatchedUser(null);
+      return;
+    }
+
+    const localUser = store.findUserByPhone(cleanPhone);
+    if (localUser) {
+      setMatchedUser(localUser);
+      return;
+    }
+
+    // Search online in Supabase
+    let isCancelled = false;
+    setIsSearching(true);
+    store.searchUserByPhoneOnline(cleanPhone).then((cloudUser) => {
+      if (!isCancelled) {
+        setMatchedUser(cloudUser);
+        setIsSearching(false);
+      }
+    }).catch(() => {
+      if (!isCancelled) setIsSearching(false);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [cleanPhone]);
 
   if (!isOpen) return null;
 
-  const cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
-  const matchedUser = cleanPhone.length >= 10 ? store.findUserByPhone(cleanPhone) : null;
   const isSelf = matchedUser && matchedUser.id === store.currentUser?.id;
 
-  const handleSendRequest = () => {
+  const handleSendRequest = async () => {
     setError('');
     setSuccess('');
 
     try {
-      const res = store.sendChatRequest(cleanPhone);
+      const res = await store.sendChatRequest(cleanPhone);
       if (res.status === 'already_connected') {
         setSuccess('You are already connected with this user! Opening chat...');
         setTimeout(() => {
@@ -39,6 +77,14 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
     } catch (err) {
       setError(err.message || 'Failed to send request.');
     }
+  };
+
+  const handleCopyLink = () => {
+    const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://chatting-app-tan.vercel.app';
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
   };
 
   return (
@@ -89,7 +135,7 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
                   setPhoneNumber(e.target.value);
                   setError('');
                 }}
-                placeholder="e.g. 9876543211"
+                placeholder="e.g. 9876543211 or your friend's 10-digit number"
                 maxLength={12}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:border-purple-500 transition-colors"
                 autoFocus
@@ -103,7 +149,12 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
           {/* Real-time Match Result */}
           {cleanPhone.length >= 10 && (
             <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 animate-fadeIn">
-              {matchedUser ? (
+              {isSearching ? (
+                <div className="flex items-center justify-center py-3 text-xs text-purple-300 gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Searching database for {cleanPhone}...</span>
+                </div>
+              ) : matchedUser ? (
                 isSelf ? (
                   <p className="text-xs text-amber-300">This is your own mobile number.</p>
                 ) : (
@@ -128,13 +179,23 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
                   </div>
                 )
               ) : (
-                <div className="text-center py-2 space-y-1">
-                  <p className="text-xs text-slate-300 font-medium">
-                    No user found with number <strong className="text-purple-300">{cleanPhone}</strong>
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Ask your friend to install VibeConnect on their phone and register with this mobile number!
-                  </p>
+                <div className="text-center py-2 space-y-3">
+                  <div>
+                    <p className="text-xs text-slate-300 font-medium">
+                      No user found with number <strong className="text-purple-300">{cleanPhone}</strong>
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Ask your friend to open VibeConnect in their browser and register with this number!
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleCopyLink}
+                    className="w-full py-2 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedLink ? 'Link Copied! Send it to your friend' : 'Copy VibeConnect Link to Share'}</span>
+                  </button>
                 </div>
               )}
             </div>

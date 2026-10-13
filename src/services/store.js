@@ -3,6 +3,7 @@
 // ==============================================================================
 
 import { sound } from './audio';
+import { getSupabase } from './supabase';
 
 // Pre-registered Directory of Sample Mobile Numbers for Local Testing
 // In Supabase, this queries the `profiles` table directly.
@@ -76,6 +77,9 @@ class StoreService {
         }
       };
     }
+
+    // Connect to Supabase Cloud Database & listen for realtime updates
+    this.initSupabaseSync();
   }
 
   loadStorage(key, fallback) {
@@ -130,41 +134,220 @@ class StoreService {
   }
 
   // ============================================================================
+  // SUPABASE REAL-TIME DATABASE SYNC
+  // ============================================================================
+
+  async initSupabaseSync() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+      // 1. Fetch live profiles from Supabase database
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (!error && profiles && profiles.length > 0) {
+        profiles.forEach(p => {
+          const u = {
+            id: p.id,
+            phone: p.phone_number,
+            username: p.username || 'user',
+            nickname: p.nickname || 'User',
+            avatar: p.avatar_url || '🦊',
+            bio: p.bio || 'Using VibeConnect ✨',
+            status: p.status || 'online',
+            lastSeen: p.last_seen || 'Active now'
+          };
+          const idx = this.users.findIndex(item => item.phone === p.phone_number);
+          if (idx !== -1) {
+            this.users[idx] = { ...this.users[idx], ...u };
+          } else {
+            this.users.push(u);
+          }
+        });
+        this.notify();
+      }
+
+      // 2. Fetch pending chat requests for this user if logged in
+      if (this.currentUser) {
+        this.fetchCloudChatRequests();
+      }
+
+      // 3. Setup real-time listener for profiles, chat requests, and messages
+      supabase
+        .channel('vibeconnect_realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+          if (payload.new) {
+            const p = payload.new;
+            const u = {
+              id: p.id,
+              phone: p.phone_number,
+              username: p.username || 'user',
+              nickname: p.nickname || 'User',
+              avatar: p.avatar_url || '🦊',
+              bio: p.bio || 'Using VibeConnect ✨',
+              status: p.status || 'online',
+              lastSeen: p.last_seen || 'Active now'
+            };
+            const idx = this.users.findIndex(item => item.phone === p.phone_number);
+            if (idx !== -1) {
+              this.users[idx] = { ...this.users[idx], ...u };
+            } else {
+              this.users.push(u);
+            }
+            this.notify();
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_requests' }, (payload) => {
+          if (payload.new && this.currentUser && payload.new.receiver_id === this.currentUser.id) {
+            const req = {
+              id: payload.new.id,
+              senderId: payload.new.sender_id,
+              receiverId: payload.new.receiver_id,
+              status: payload.new.status,
+              createdAt: new Date(payload.new.created_at).getTime()
+            };
+            if (!this.chatRequests.find(r => r.id === req.id)) {
+              this.chatRequests.unshift(req);
+              sound.playIncomingCall();
+              this.notify();
+            }
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          if (payload.new && this.currentUser) {
+            const m = payload.new;
+            if (m.sender_id !== this.currentUser.id) {
+              const newMsg = {
+                id: m.id,
+                conversationId: m.conversation_id,
+                senderId: m.sender_id,
+                text: m.text,
+                attachment: null,
+                replyTo: null,
+                timestamp: new Date(m.created_at).getTime(),
+                reactions: {},
+                isEdited: m.is_edited
+              };
+              if (!this.messages.find(msg => msg.id === newMsg.id)) {
+                this.messages.push(newMsg);
+                sound.playMessageSent();
+                this.notify();
+              }
+            }
+          }
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('Supabase sync init failed:', err);
+    }
+  }
+
+  async fetchCloudChatRequests() {
+    const supabase = getSupabase();
+    if (!supabase || !this.currentUser) return;
+    try {
+      const { data, error } = await supabase
+        .from('chat_requests')
+        .select('*')
+        .or(`receiver_id.eq.${this.currentUser.id},sender_id.eq.${this.currentUser.id}`);
+
+      if (!error && data) {
+        data.forEach(item => {
+          const req = {
+            id: item.id,
+            senderId: item.sender_id,
+            receiverId: item.receiver_id,
+            status: item.status,
+            createdAt: new Date(item.created_at).getTime()
+          };
+          const idx = this.chatRequests.findIndex(r => r.id === req.id);
+          if (idx !== -1) {
+            this.chatRequests[idx] = req;
+          } else {
+            this.chatRequests.unshift(req);
+          }
+        });
+        this.notify();
+      }
+    } catch (e) {
+      console.warn('Fetch chat requests error:', e);
+    }
+  }
+
+  // ============================================================================
   // PHONE NUMBER AUTH & REGISTRATION
   // ============================================================================
 
-  loginWithPhone({ phone, name, avatar }) {
+  async loginWithPhone({ phone, name, avatar }) {
     const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
     if (!cleanPhone || cleanPhone.length < 10) {
       throw new Error('Please enter a valid 10-digit mobile number.');
     }
 
-    // Check if phone already registered
+    const nickname = (name || 'User ' + cleanPhone.slice(-4)).trim();
+    const avatarChoice = avatar || '🦊';
+    const username = nickname.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user' + cleanPhone.slice(-4);
+
     let user = this.users.find(u => u.phone === cleanPhone);
 
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .upsert({
+            phone_number: cleanPhone,
+            username,
+            nickname,
+            avatar_url: avatarChoice,
+            status: 'online',
+            last_seen: new Date().toISOString()
+          }, { onConflict: 'phone_number' })
+          .select()
+          .single();
+
+        if (!error && data) {
+          user = {
+            id: data.id,
+            phone: data.phone_number,
+            username: data.username,
+            nickname: data.nickname,
+            avatar: data.avatar_url || avatarChoice,
+            bio: data.bio || 'Using VibeConnect ✨',
+            status: 'online',
+            lastSeen: 'Active now'
+          };
+          const idx = this.users.findIndex(u => u.phone === cleanPhone);
+          if (idx !== -1) {
+            this.users[idx] = user;
+          } else {
+            this.users.push(user);
+          }
+        }
+      } catch (e) {
+        console.warn('Supabase profile upsert error:', e);
+      }
+    }
+
     if (!user) {
-      // Create new user profile with this phone number
-      const nickname = (name || 'User ' + cleanPhone.slice(-4)).trim();
       user = {
         id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         phone: cleanPhone,
-        username: nickname.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user' + cleanPhone.slice(-4),
-        nickname: nickname,
-        avatar: avatar || '🦊',
+        username,
+        nickname,
+        avatar: avatarChoice,
         bio: 'Using VibeConnect ✨',
         status: 'online',
         lastSeen: 'Active now'
       };
       this.users.push(user);
-    } else {
-      user.status = 'online';
-      user.lastSeen = 'Active now';
-      if (name && name.trim()) user.nickname = name.trim();
-      if (avatar) user.avatar = avatar;
     }
 
     this.currentUser = user;
     this.notify();
+    this.fetchCloudChatRequests();
     return user;
   }
 
@@ -174,6 +357,7 @@ class StoreService {
       this.currentUser = target;
       target.status = 'online';
       this.notify();
+      this.fetchCloudChatRequests();
     }
   }
 
@@ -198,6 +382,16 @@ class StoreService {
       this.users[idx] = { ...this.currentUser };
     }
     this.notify();
+
+    const supabase = getSupabase();
+    if (supabase && this.currentUser.id) {
+      supabase.from('profiles').update({
+        nickname: this.currentUser.nickname,
+        bio: this.currentUser.bio,
+        avatar_url: this.currentUser.avatar,
+        status: this.currentUser.status
+      }).eq('id', this.currentUser.id).then();
+    }
   }
 
   // ============================================================================
@@ -210,7 +404,51 @@ class StoreService {
     return this.users.find(u => u.phone === cleanPhone) || null;
   }
 
-  sendChatRequest(targetPhone) {
+  async searchUserByPhoneOnline(phone) {
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) return null;
+
+    // Check in-memory first
+    const local = this.findUserByPhone(cleanPhone);
+    if (local) return local;
+
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('phone_number', cleanPhone)
+          .maybeSingle();
+
+        if (!error && data) {
+          const u = {
+            id: data.id,
+            phone: data.phone_number,
+            username: data.username,
+            nickname: data.nickname,
+            avatar: data.avatar_url || '🦊',
+            bio: data.bio || 'Using VibeConnect ✨',
+            status: data.status || 'online',
+            lastSeen: data.last_seen || 'Active now'
+          };
+          const idx = this.users.findIndex(item => item.phone === cleanPhone);
+          if (idx !== -1) {
+            this.users[idx] = u;
+          } else {
+            this.users.push(u);
+          }
+          this.notify();
+          return u;
+        }
+      } catch (e) {
+        console.warn('Online phone search error:', e);
+      }
+    }
+    return null;
+  }
+
+  async sendChatRequest(targetPhone) {
     if (!this.currentUser) throw new Error('Please log in first.');
 
     const cleanPhone = (targetPhone || '').replace(/[^0-9]/g, '');
@@ -222,7 +460,11 @@ class StoreService {
       throw new Error('You cannot send a chat request to your own mobile number.');
     }
 
-    const targetUser = this.findUserByPhone(cleanPhone);
+    let targetUser = this.findUserByPhone(cleanPhone);
+    if (!targetUser) {
+      targetUser = await this.searchUserByPhoneOnline(cleanPhone);
+    }
+
     if (!targetUser) {
       throw new Error(`No user registered with mobile number "${cleanPhone}". Ask your friend to open VibeConnect and enter their number!`);
     }
@@ -255,16 +497,49 @@ class StoreService {
       createdAt: Date.now()
     };
 
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('chat_requests')
+          .insert({
+            sender_id: this.currentUser.id,
+            receiver_id: targetUser.id,
+            status: 'pending'
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          newReq.id = data.id;
+        }
+      } catch (e) {
+        console.warn('Supabase chat request insert error:', e);
+      }
+    }
+
     this.chatRequests.unshift(newReq);
     this.notify();
     return { status: 'sent', targetUser };
   }
 
-  acceptChatRequest(requestId) {
+  async acceptChatRequest(requestId) {
     const req = this.chatRequests.find(r => r.id === requestId);
     if (!req) return;
 
     req.status = 'accepted';
+
+    const supabase = getSupabase();
+    if (supabase) {
+      try {
+        await supabase
+          .from('chat_requests')
+          .update({ status: 'accepted' })
+          .eq('id', requestId);
+      } catch (e) {
+        console.warn('Supabase accept chat request error:', e);
+      }
+    }
 
     // Create 1-on-1 direct conversation between the two users!
     const sender = this.getUserById(req.senderId);
