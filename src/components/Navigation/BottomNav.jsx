@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import React from 'react';
-import { MessageSquare, Users, Phone, UserCheck, Settings, Plus } from 'lucide-react';
+import { MessageSquare, Users, Phone, UserCheck, Settings, Plus, User } from 'lucide-react';
 
 export default function BottomNav({ currentTab, setTab, onOpenCreateGroup }) {
   const tabs = [
@@ -11,7 +11,7 @@ export default function BottomNav({ currentTab, setTab, onOpenCreateGroup }) {
     { id: 'groups', label: 'Groups', icon: Users },
     { id: 'create', label: 'New', icon: Plus, isAction: true },
     { id: 'calls', label: 'Calls', icon: Phone },
-    { id: 'contacts', label: 'Friends', icon: UserCheck }
+    { id: 'profile', label: 'Profile', icon: User }
   ];
 
   return (

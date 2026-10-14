@@ -55,8 +55,9 @@ class StoreService {
     this.listeners = new Set();
     this.channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('vibeconnect_sync') : null;
     
-    // Clean initial state — NO fake random conversations or fake dummy messages!
-    this.currentUser = this.loadStorage('vibe_current_user', REGISTERED_USERS[0]);
+    // Clean initial state — Require users to enter their own mobile number (no fake auto-login)
+    const storedUser = this.loadStorage('vibe_current_user', null);
+    this.currentUser = (storedUser && storedUser.id !== 'usr_anju') ? storedUser : null;
     this.users = this.loadStorage('vibe_users', REGISTERED_USERS);
     this.groups = this.loadStorage('vibe_groups', []);
     this.conversations = this.loadStorage('vibe_conversations', []);

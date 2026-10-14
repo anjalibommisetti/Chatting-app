@@ -121,6 +121,26 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
           </div>
         )}
 
+        {/* Current user identifier banner */}
+        <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs mb-4">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">You are logged in as:</span>
+            <span className="text-white font-bold text-xs">
+              {store.currentUser?.nickname}{' '}
+              <span className="text-purple-300 font-mono">({store.currentUser?.phone})</span>
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              onClose();
+              store.logOut();
+            }}
+            className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[11px] font-semibold transition-colors cursor-pointer"
+          >
+            Switch Number
+          </button>
+        </div>
+
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">

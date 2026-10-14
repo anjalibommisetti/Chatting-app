@@ -123,6 +123,21 @@ export default function ProfileView() {
               {currentUser?.bio || 'No bio specified.'}
             </p>
           </div>
+
+          {/* Registered Phone & Sign Out */}
+          <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-[11px] text-slate-400 block font-medium">Logged in with Mobile Number:</span>
+              <span className="text-sm font-bold text-purple-300 font-mono">{currentUser?.phone || 'Demo Account'}</span>
+            </div>
+            <button
+              onClick={() => store.logOut()}
+              className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-semibold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out / Sign In with Your Number</span>
+            </button>
+          </div>
         </div>
 
         {/* Edit Form Modal/Drawer */}
