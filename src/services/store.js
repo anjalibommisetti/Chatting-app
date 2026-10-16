@@ -6,6 +6,7 @@
 import { api } from './api';
 import { realtime } from './socket';
 import { sound } from './audio';
+import { notifications } from './notifications';
 
 // Fallback seed accounts for local offline testing
 const SEED_USERS = [
@@ -65,7 +66,7 @@ class StoreService {
 
     // In-memory state with local storage cache for instant hydration
     this.currentUser = this.loadStorage('vibe_current_user', null);
-    this.users = this.loadStorage('vibe_users', SEED_USERS);
+    this.users = this.loadStorage('vibe_users', []);
     this.groups = this.loadStorage('vibe_groups', []);
     this.conversations = this.loadStorage('vibe_conversations', []);
     this.messages = this.loadStorage('vibe_messages', []);
@@ -154,7 +155,16 @@ class StoreService {
           }
         }
 
-        if (this.settings.soundAlerts) {
+        // Notify with desktop banner and audio alert if from someone else
+        if (newMsg.senderId !== this.currentUser?.id) {
+          const sender = this.getUserById(newMsg.senderId);
+          notifications.showMessageNotification({
+            senderName: sender?.name || 'New Message',
+            text: newMsg.text,
+            avatar: sender?.avatar,
+            conversationId: newMsg.conversationId
+          });
+        } else if (this.settings.soundAlerts) {
           sound.playMessageSent();
         }
 
@@ -343,9 +353,87 @@ class StoreService {
       this.currentUser.status = 'offline';
     }
     this.currentUser = null;
+    this.conversations = [];
+    this.messages = [];
+    this.groups = [];
+    api.setToken(null);
+    realtime.updateAuthToken(null);
+    
+    // Clear browser persistent session storage
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('vibe_current_user');
+      localStorage.removeItem('vibe_conversations');
+      localStorage.removeItem('vibe_messages');
+      localStorage.removeItem('vibe_groups');
+      localStorage.removeItem('vibe_auth_token');
+    }
+    this.notify();
+  }
+
+  // Backup & Export chats to local file
+  backupChats() {
+    const backupData = {
+      app: 'VibeConnect',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      user: this.currentUser,
+      conversations: this.conversations,
+      messages: this.messages,
+      groups: this.groups,
+      settings: this.settings
+    };
+
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `vibeconnect_backup_${this.currentUser?.username || 'chats'}_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
+  // Restore chats from user backup file
+  async restoreChats(backupData) {
+    if (!backupData || (!backupData.conversations && !backupData.messages)) {
+      throw new Error('Invalid backup file. Missing conversations or messages.');
+    }
+
+    if (Array.isArray(backupData.conversations)) {
+      this.conversations = backupData.conversations;
+    }
+    if (Array.isArray(backupData.messages)) {
+      this.messages = backupData.messages;
+    }
+    if (Array.isArray(backupData.groups)) {
+      this.groups = backupData.groups;
+    }
+
+    this.notify();
+    return true;
+  }
+
+  // Clear all local cache and reset to completely fresh install state
+  clearAllLocalData() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.clear();
+    }
+    this.currentUser = null;
+    this.conversations = [];
+    this.messages = [];
+    this.groups = [];
+    this.callLogs = [];
+    this.friendNicknames = {};
     api.setToken(null);
     realtime.updateAuthToken(null);
     this.notify();
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
   }
 
   // ============================================================================

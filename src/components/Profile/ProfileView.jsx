@@ -250,6 +250,17 @@ export default function ProfileView() {
             ))}
           </div>
         </div>
+
+        {/* Log Out Action */}
+        <div className="pt-2">
+          <button
+            onClick={() => store.logOut()}
+            className="w-full py-3.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 hover:text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log Out of VibeConnect</span>
+          </button>
+        </div>
       </div>
     </div>
   );

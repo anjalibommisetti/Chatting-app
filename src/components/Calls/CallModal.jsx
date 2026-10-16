@@ -119,7 +119,7 @@ export default function CallModal() {
             {activeCall?.targetName || 'Friend'}
           </h3>
           <span className="text-xs text-purple-300/80 mb-8 flex items-center gap-1.5 animate-pulse">
-            <span>Ringing ({isGroup ? 'Private Group Call' : '1-on-1 Call'})...</span>
+            <span>{calling.callNotice || `Ringing (${isGroup ? 'Private Group Call' : '1-on-1 Call'})... Waiting for friend to answer`}</span>
           </span>
 
           <button

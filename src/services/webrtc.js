@@ -1,11 +1,7 @@
-// ==============================================================================
-// VibeConnect — Real WebRTC Multi-Peer Audio & Video Calling Service
-// Integrated with Socket.IO Real-Time Signaling and BroadcastChannel fallback
-// ==============================================================================
-
 import { sound } from './audio';
 import { store } from './store';
 import { realtime } from './socket';
+import { notifications } from './notifications';
 
 export const CALL_STATUS = {
   IDLE: 'IDLE',
@@ -28,6 +24,9 @@ class CallingService {
     this.facingMode = 'user'; // 'user' or 'environment'
     this.callDuration = 0;
     this.durationInterval = null;
+    this.ringTimeout = null;
+    this.callNotice = null;
+    this.activeNotification = null;
     this.listeners = new Set();
     this.peerConnections = new Map(); // peerId -> RTCPeerConnection
 
@@ -45,6 +44,7 @@ class CallingService {
     realtime.on('incoming-call', (payload) => {
       if (this.status === CALL_STATUS.IDLE && store.currentUser) {
         this.status = CALL_STATUS.INCOMING_RINGING;
+        this.callNotice = null;
         this.activeCall = {
           type: payload.type,
           isGroup: payload.isGroup,
@@ -53,7 +53,15 @@ class CallingService {
           callerName: payload.callerName,
           callerAvatar: payload.callerAvatar
         };
-        sound.startIncomingRing();
+
+        // Trigger browser desktop notification + ringtone audio
+        this.activeNotification = notifications.showCallNotification({
+          callerName: payload.callerName,
+          callType: payload.type,
+          onAccept: () => this.acceptCall(),
+          onDecline: () => this.declineCall()
+        });
+
         this.notify();
       }
     });
@@ -66,7 +74,9 @@ class CallingService {
 
     realtime.on('call-rejected', () => {
       if (this.status !== CALL_STATUS.IDLE) {
-        this.endCall(false);
+        this.callNotice = 'Call declined by recipient.';
+        this.notify();
+        setTimeout(() => this.endCall(false), 2000);
       }
     });
 
@@ -266,6 +276,7 @@ class CallingService {
 
   async startCall({ type = 'video', isGroup = false, targetId, targetName, targetAvatar, participants = [] }) {
     this.status = CALL_STATUS.OUTGOING_RINGING;
+    this.callNotice = null;
     this.activeCall = {
       type,
       isGroup,
@@ -295,12 +306,15 @@ class CallingService {
       });
     }
 
-    // Auto-connect demo response after 3.5 seconds if testing single-user
-    this.demoTimeout = setTimeout(async () => {
+    // 35-second unanswered call timeout (NO FAKE AUTO-CONNECT!)
+    if (this.ringTimeout) clearTimeout(this.ringTimeout);
+    this.ringTimeout = setTimeout(() => {
       if (this.status === CALL_STATUS.OUTGOING_RINGING) {
-        await this.acceptCall();
+        this.callNotice = 'No answer. Friend did not pick up.';
+        this.notify();
+        setTimeout(() => this.endCall(true), 2500);
       }
-    }, 3500);
+    }, 35000);
   }
 
   handleSignalingMessage(msg) {
@@ -314,12 +328,20 @@ class CallingService {
 
       if (isTarget && call.callerId !== store.currentUser.id && this.status === CALL_STATUS.IDLE) {
         this.status = CALL_STATUS.INCOMING_RINGING;
+        this.callNotice = null;
         this.activeCall = {
           ...call,
           callerName: msg.caller?.nickname || msg.caller?.name || 'Friend',
           callerAvatar: msg.caller?.avatar || '👤'
         };
-        sound.startIncomingRing();
+
+        this.activeNotification = notifications.showCallNotification({
+          callerName: this.activeCall.callerName,
+          callType: this.activeCall.type,
+          onAccept: () => this.acceptCall(),
+          onDecline: () => this.declineCall()
+        });
+
         this.notify();
       }
     } else if (msg.type === 'CALL_ACCEPTED') {
@@ -328,13 +350,19 @@ class CallingService {
       }
     } else if (msg.type === 'CALL_DECLINED' || msg.type === 'CALL_ENDED') {
       if (this.status !== CALL_STATUS.IDLE) {
-        this.endCall(false);
+        this.callNotice = 'Call ended or declined.';
+        this.notify();
+        setTimeout(() => this.endCall(false), 2000);
       }
     }
   }
 
   async acceptCall() {
-    if (this.demoTimeout) clearTimeout(this.demoTimeout);
+    if (this.ringTimeout) clearTimeout(this.ringTimeout);
+    if (this.activeNotification) {
+      this.activeNotification.close();
+      this.activeNotification = null;
+    }
     sound.stopIncomingRing();
     sound.stopOutgoingRing();
     sound.playCallConnected();
@@ -342,6 +370,7 @@ class CallingService {
     await this.getLocalMedia(this.activeCall?.type || 'video');
 
     this.status = CALL_STATUS.CONNECTED;
+    this.callNotice = null;
     this.startDurationTimer();
 
     // Socket.IO signaling acceptance
@@ -371,7 +400,11 @@ class CallingService {
   }
 
   declineCall() {
-    if (this.demoTimeout) clearTimeout(this.demoTimeout);
+    if (this.ringTimeout) clearTimeout(this.ringTimeout);
+    if (this.activeNotification) {
+      this.activeNotification.close();
+      this.activeNotification = null;
+    }
     sound.stopIncomingRing();
     sound.stopOutgoingRing();
     sound.playCallEnded();
@@ -404,7 +437,11 @@ class CallingService {
   }
 
   endCall(notifyPeers = true) {
-    if (this.demoTimeout) clearTimeout(this.demoTimeout);
+    if (this.ringTimeout) clearTimeout(this.ringTimeout);
+    if (this.activeNotification) {
+      this.activeNotification.close();
+      this.activeNotification = null;
+    }
     sound.stopIncomingRing();
     sound.stopOutgoingRing();
     sound.playCallEnded();

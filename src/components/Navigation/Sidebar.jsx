@@ -142,7 +142,7 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
               e.stopPropagation();
               store.logOut();
             }}
-            className="hidden lg:flex p-2 text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+            className="flex p-2 text-[var(--text-muted)] hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
             title="Log Out"
           >
             <LogOut className="w-4 h-4" />
