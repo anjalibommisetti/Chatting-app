@@ -2,27 +2,52 @@
 
 @layer base {
   :root {
-    --bg-navy-950: #07090F;
-    --bg-navy-900: #0B0E17;
-    --bg-navy-850: #101422;
-    --bg-navy-800: #151B2E;
-    --bg-navy-750: #1A223B;
-    --bg-navy-700: #202947;
+    --bg-main: #07090F;
+    --bg-surface: #0B0E17;
+    --bg-card: #101422;
+    --bg-card-subtle: #151B2E;
+    --bg-input: rgba(255, 255, 255, 0.05);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(139, 92, 246, 0.35);
     
-    --accent-purple: #7C3AED;
-    --accent-purple-light: #8B5CF6;
-    --accent-purple-hover: #6D28D9;
-    --accent-cyan: #06B6D4;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
     
+    --chat-bubble-self: linear-gradient(135deg, #7C3AED 0%, #6366F1 100%);
+    --chat-bubble-peer: #151B2E;
+    --chat-bubble-peer-text: #F8FAFC;
+    --chat-bubble-border: rgba(255, 255, 255, 0.06);
+
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-heading: 'Outfit', sans-serif;
   }
 
+  [data-theme="light"] {
+    --bg-main: #F1F5F9;
+    --bg-surface: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-card-subtle: #F8FAFC;
+    --bg-input: #F1F5F9;
+    --border-color: #E2E8F0;
+    --border-highlight: rgba(124, 58, 237, 0.4);
+    
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+    
+    --chat-bubble-self: linear-gradient(135deg, #7C3AED 0%, #6366F1 100%);
+    --chat-bubble-peer: #FFFFFF;
+    --chat-bubble-peer-text: #0F172A;
+    --chat-bubble-border: #E2E8F0;
+  }
+
   body {
     font-family: var(--font-sans);
-    background-color: var(--bg-navy-900);
-    color: #F8FAFC;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
     overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   h1, h2, h3, h4, .font-heading {
@@ -51,10 +76,10 @@
 
 /* Glassmorphism utility */
 .glass-panel {
-  background: rgba(16, 20, 34, 0.78);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
 }
 
 .glass-panel-hover {
@@ -62,8 +87,8 @@
 }
 
 .glass-panel-hover:hover {
-  background: rgba(26, 34, 59, 0.85);
-  border-color: rgba(139, 92, 246, 0.35);
+  background: var(--bg-card-subtle);
+  border-color: var(--border-highlight);
 }
 
 /* Gradient accents */
@@ -98,3 +123,12 @@
 .dot-1 { animation: typingBounce 1.4s infinite; }
 .dot-2 { animation: typingBounce 1.4s infinite 0.2s; }
 .dot-3 { animation: typingBounce 1.4s infinite 0.4s; }
+
+/* Message bubble transitions */
+.message-bubble {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.message-bubble:active {
+  transform: scale(0.99);
+}

@@ -10,11 +10,13 @@ import {
   Sparkles, 
   ArrowRight, 
   Phone, 
-  Lock 
+  Lock,
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 import { store } from '../../services/store';
 
-export default function WelcomeScreen({ onGetStarted, onQuickLogin }) {
+export default function WelcomeScreen({ onOpenLogin, onOpenSignup, onQuickLogin }) {
   const sampleAccounts = store.users.slice(0, 4);
 
   return (
@@ -33,34 +35,44 @@ export default function WelcomeScreen({ onGetStarted, onQuickLogin }) {
             <h1 className="font-heading font-extrabold text-xl text-white tracking-tight flex items-center gap-2">
               VibeConnect
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                STRICT 5-MEMBER GROUPS
+                PRO MESSENGER
               </span>
             </h1>
-            <p className="text-xs text-slate-400">Private Messenger by Mobile Number</p>
+            <p className="text-xs text-slate-400">Direct Chat, Strict 5-Member Groups & HD Calls</p>
           </div>
         </div>
 
-        <button
-          onClick={onGetStarted}
-          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-600/20 transition-colors cursor-pointer"
-        >
-          Sign In
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenLogin}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10 transition-colors cursor-pointer flex items-center gap-1.5"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </button>
+          <button
+            onClick={onOpenSignup}
+            className="px-4 py-2 rounded-xl bg-vibe-gradient hover:opacity-95 text-white text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Create Account</span>
+          </button>
+        </div>
       </header>
 
       {/* Hero Section */}
       <main className="w-full max-w-5xl mx-auto px-6 py-8 flex flex-col items-center text-center relative z-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-purple-300 text-xs font-semibold mb-6 animate-pulse">
           <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-          <span>Real Conversations. Pure Privacy. Connect by Phone Number.</span>
+          <span>Real-time Messaging • WebRTC Audio & Video • WhatsApp Usability</span>
         </div>
 
         <h2 className="font-heading text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight max-w-3xl leading-[1.15] mb-5">
-          Enter Your Mobile Number. <span className="bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">Connect Instantly</span>.
+          Pure Conversations. <span className="bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">Zero Clutter</span>.
         </h2>
 
         <p className="text-slate-300/80 text-base sm:text-lg max-w-2xl leading-relaxed mb-8">
-          No random dummy messages. Enter your friend's mobile number, send a message request, and once they accept, enjoy private chats, HD voice calls, and video calls.
+          A modern, high-performance messaging platform with real-time text delivery, message editing, reactions, audio/video calling, and intimate 5-member private groups.
         </p>
 
         {/* Feature Cards Grid */}
@@ -70,10 +82,10 @@ export default function WelcomeScreen({ onGetStarted, onQuickLogin }) {
               <Phone className="w-5 h-5" />
             </div>
             <h3 className="font-heading font-bold text-base text-white mb-1.5">
-              Mobile Number Discovery
+              Direct Discovery
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Find contacts by their phone number. Send a message request before starting a conversation for total privacy.
+              Find contacts by mobile number, email, or username. Instant 1-on-1 private messaging with delivery ticks.
             </p>
           </div>
 
@@ -86,7 +98,7 @@ export default function WelcomeScreen({ onGetStarted, onQuickLogin }) {
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">Max 5</span>
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Enforced at the database level. No massive chaotic groups—only intimate circles of up to 5 people.
+              Enforced at the database and backend level. Intimate circles of up to 5 people with invite codes and admin controls.
             </p>
           </div>
 
@@ -98,18 +110,18 @@ export default function WelcomeScreen({ onGetStarted, onQuickLogin }) {
               HD Voice & Video Calls
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Real WebRTC calls for 1-on-1 and groups up to 5 members with front/back camera switch and screen share.
+              Peer-to-peer WebRTC calls with camera flipping, screen sharing, and mute toggles without intermediate surveillance.
             </p>
           </div>
         </div>
 
         {/* Quick Demo Switcher */}
         <div className="w-full max-w-lg p-6 rounded-2xl bg-[#101422]/95 border border-purple-500/25 shadow-2xl backdrop-blur-xl">
-          <span className="text-xs font-bold text-purple-300 uppercase tracking-wider block mb-2">
-            Instant Test Login (Select a Profile)
+          <span className="text-xs font-bold text-purple-300 uppercase tracking-wider block mb-1.5">
+            Instant Test Login (Click to Enter)
           </span>
           <p className="text-[11px] text-slate-400 mb-3">
-            To test on two phones, open on Phone 1 as Anju, and on Phone 2 enter Priya's phone number (<strong className="text-purple-300">9876543211</strong>)!
+            Select an account to log in instantly, or test between two tabs/devices!
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
@@ -126,19 +138,26 @@ export default function WelcomeScreen({ onGetStarted, onQuickLogin }) {
             ))}
           </div>
 
-          <button
-            onClick={onGetStarted}
-            className="w-full py-3 px-5 rounded-xl bg-vibe-gradient hover:opacity-95 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-600/30 active:scale-95 cursor-pointer"
-          >
-            <span>Enter With Mobile Number</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onOpenLogin}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs transition-colors cursor-pointer"
+            >
+              Sign In Existing
+            </button>
+            <button
+              onClick={onOpenSignup}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-vibe-gradient hover:opacity-95 text-white font-semibold text-xs transition-all shadow-md shadow-purple-600/25 cursor-pointer"
+            >
+              Create New Account
+            </button>
+          </div>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="w-full max-w-6xl mx-auto px-6 py-6 text-center text-xs text-slate-500 relative z-10 border-t border-white/5">
-        <p>© 2026 VibeConnect. Real 1-to-1 & Group Messaging with WebRTC Audio/Video.</p>
+        <p>© 2026 VibeConnect. Real 1-to-1 & Group Messaging with WebSockets & WebRTC.</p>
       </footer>
     </div>
   );

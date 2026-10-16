@@ -12,7 +12,7 @@ export default function JoinGroupModal({ isOpen, onClose, onGroupJoined }) {
 
   if (!isOpen) return null;
 
-  const handleJoin = (e) => {
+  const handleJoin = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -22,7 +22,7 @@ export default function JoinGroupModal({ isOpen, onClose, onGroupJoined }) {
     }
 
     try {
-      const group = store.joinGroupByCode(code);
+      const group = await store.joinGroupByCode(code);
       onGroupJoined(group);
       onClose();
     } catch (err) {

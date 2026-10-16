@@ -55,27 +55,21 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
 
   const isSelf = matchedUser && matchedUser.id === store.currentUser?.id;
 
-  const handleSendRequest = async () => {
+  const handleStartChat = async () => {
     setError('');
     setSuccess('');
 
     try {
-      const res = await store.sendChatRequest(cleanPhone);
-      if (res.status === 'already_connected') {
-        setSuccess('You are already connected with this user! Opening chat...');
+      const conv = await store.getDirectConversation(matchedUser.id);
+      if (conv) {
+        setSuccess(`Opening conversation with ${matchedUser.nickname || matchedUser.name}...`);
         setTimeout(() => {
-          onChatCreated(res.conversation.id);
+          onChatCreated(conv.id);
           onClose();
-        }, 1000);
-      } else {
-        setSuccess(`Chat request sent to ${res.targetUser.nickname}! When they accept, your chat will open.`);
-        setTimeout(() => {
-          onClose();
-          setSuccess('');
-        }, 2500);
+        }, 300);
       }
     } catch (err) {
-      setError(err.message || 'Failed to send request.');
+      setError(err.message || 'Failed to start chat.');
     }
   };
 
@@ -190,11 +184,11 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated }) 
                     </div>
 
                     <button
-                      onClick={handleSendRequest}
-                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-purple-600/30"
+                      onClick={handleStartChat}
+                      className="px-4 py-2 rounded-xl bg-vibe-gradient hover:opacity-95 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-purple-600/30"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>Send Request</span>
+                      <span>Start Chat</span>
                     </button>
                   </div>
                 )

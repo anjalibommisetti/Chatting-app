@@ -1,25 +1,30 @@
 // ==============================================================================
-// VibeConnect — Core State Management, Mobile Number Discovery & Request Engine
+// VibeConnect — Core Reactive State Management & Real-Time Sync Engine
+// Full integration with REST API, Socket.IO WebSockets, and ACID persistence
 // ==============================================================================
 
+import { api } from './api';
+import { realtime } from './socket';
 import { sound } from './audio';
-import { getSupabase } from './supabase';
 
-// Pre-registered Directory of Sample Mobile Numbers for Local Testing
-// In Supabase, this queries the `profiles` table directly.
-const REGISTERED_USERS = [
+// Fallback seed accounts for local offline testing
+const SEED_USERS = [
   {
     id: 'usr_anju',
+    name: 'Anjali Bommisetti',
+    email: 'anju@vibeconnect.io',
     phone: '9876543210',
     username: 'anju',
     nickname: 'Anju',
     avatar: '🦊',
-    bio: 'Using VibeConnect ✨',
+    bio: 'Building the next-gen private messenger ✨',
     status: 'online',
     lastSeen: 'Active now'
   },
   {
     id: 'usr_priya',
+    name: 'Priya Sharma',
+    email: 'priya@vibeconnect.io',
     phone: '9876543211',
     username: 'priya',
     nickname: 'Priya',
@@ -30,57 +35,58 @@ const REGISTERED_USERS = [
   },
   {
     id: 'usr_alex',
+    name: 'Alex Rivera',
+    email: 'alex@vibeconnect.io',
     phone: '9876543212',
     username: 'alex',
     nickname: 'Alex',
     avatar: '⚡',
-    bio: 'Available for video calls 🎧',
+    bio: 'Available for video & voice calls 🎧',
     status: 'online',
     lastSeen: 'Active now'
   },
   {
     id: 'usr_sam',
+    name: 'Sammy Taylor',
+    email: 'sammy@vibeconnect.io',
     phone: '9876543213',
     username: 'sammy',
     nickname: 'Sammy',
     avatar: '🚀',
-    bio: 'Exploring tech!',
+    bio: 'Exploring tech and decentralized protocols!',
     status: 'away',
-    lastSeen: '10m ago'
+    lastSeen: '15m ago'
   }
 ];
 
 class StoreService {
   constructor() {
     this.listeners = new Set();
-    this.channel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('vibeconnect_sync') : null;
-    
-    // Clean initial state — Require users to enter their own mobile number (no fake auto-login)
-    const storedUser = this.loadStorage('vibe_current_user', null);
-    this.currentUser = (storedUser && storedUser.id !== 'usr_anju') ? storedUser : null;
-    this.users = this.loadStorage('vibe_users', REGISTERED_USERS);
+
+    // In-memory state with local storage cache for instant hydration
+    this.currentUser = this.loadStorage('vibe_current_user', null);
+    this.users = this.loadStorage('vibe_users', SEED_USERS);
     this.groups = this.loadStorage('vibe_groups', []);
     this.conversations = this.loadStorage('vibe_conversations', []);
     this.messages = this.loadStorage('vibe_messages', []);
     this.callLogs = this.loadStorage('vibe_call_logs', []);
-    this.chatRequests = this.loadStorage('vibe_chat_requests', []);
-    this.friendNicknames = this.loadStorage('vibe_friend_nicknames', {}); // friendId -> custom nickname
+    this.friendNicknames = this.loadStorage('vibe_friend_nicknames', {});
+    this.typingMap = {}; // conversationId -> Set of usernames
+
     this.settings = this.loadStorage('vibe_settings', {
+      theme: 'dark',
       readReceipts: true,
-      soundAlerts: true,
-      theme: 'dark'
+      soundAlerts: true
     });
 
-    if (this.channel) {
-      this.channel.onmessage = (event) => {
-        if (event.data && event.data.type === 'STORE_SYNC') {
-          this.syncFromExternal();
-        }
-      };
-    }
+    // Apply saved theme immediately
+    this.applyTheme(this.settings.theme || 'dark');
 
-    // Connect to Supabase Cloud Database & listen for realtime updates
-    this.initSupabaseSync();
+    // Setup Socket.IO Event Handlers
+    this.setupSocketListeners();
+
+    // Auto-authenticate with backend if token exists
+    this.initAuth();
   }
 
   loadStorage(key, fallback) {
@@ -105,27 +111,9 @@ class StoreService {
     this.saveStorage('vibe_conversations', this.conversations);
     this.saveStorage('vibe_messages', this.messages);
     this.saveStorage('vibe_call_logs', this.callLogs);
-    this.saveStorage('vibe_chat_requests', this.chatRequests);
     this.saveStorage('vibe_friend_nicknames', this.friendNicknames);
     this.saveStorage('vibe_settings', this.settings);
 
-    if (this.channel) {
-      this.channel.postMessage({ type: 'STORE_SYNC' });
-    }
-
-    this.listeners.forEach(fn => fn());
-  }
-
-  syncFromExternal() {
-    this.currentUser = this.loadStorage('vibe_current_user', this.currentUser);
-    this.users = this.loadStorage('vibe_users', this.users);
-    this.groups = this.loadStorage('vibe_groups', this.groups);
-    this.conversations = this.loadStorage('vibe_conversations', this.conversations);
-    this.messages = this.loadStorage('vibe_messages', this.messages);
-    this.callLogs = this.loadStorage('vibe_call_logs', this.callLogs);
-    this.chatRequests = this.loadStorage('vibe_chat_requests', this.chatRequests);
-    this.friendNicknames = this.loadStorage('vibe_friend_nicknames', this.friendNicknames);
-    this.settings = this.loadStorage('vibe_settings', this.settings);
     this.listeners.forEach(fn => fn());
   }
 
@@ -134,247 +122,243 @@ class StoreService {
     return () => this.listeners.delete(listener);
   }
 
-  // ============================================================================
-  // SUPABASE REAL-TIME DATABASE SYNC
-  // ============================================================================
-
-  async initSupabaseSync() {
-    const supabase = getSupabase();
-    if (!supabase) return;
-
-    try {
-      // 1. Fetch live profiles from Supabase database
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (!error && profiles && profiles.length > 0) {
-        profiles.forEach(p => {
-          const u = {
-            id: p.id,
-            phone: p.phone_number,
-            username: p.username || 'user',
-            nickname: p.nickname || 'User',
-            avatar: p.avatar_url || '🦊',
-            bio: p.bio || 'Using VibeConnect ✨',
-            status: p.status || 'online',
-            lastSeen: p.last_seen || 'Active now'
-          };
-          const idx = this.users.findIndex(item => item.phone === p.phone_number);
-          if (idx !== -1) {
-            this.users[idx] = { ...this.users[idx], ...u };
-          } else {
-            this.users.push(u);
-          }
-        });
-        this.notify();
+  applyTheme(theme) {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
       }
-
-      // 2. Fetch pending chat requests for this user if logged in
-      if (this.currentUser) {
-        this.fetchCloudChatRequests();
-      }
-
-      // 3. Setup real-time listener for profiles, chat requests, and messages
-      supabase
-        .channel('vibeconnect_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
-          if (payload.new) {
-            const p = payload.new;
-            const u = {
-              id: p.id,
-              phone: p.phone_number,
-              username: p.username || 'user',
-              nickname: p.nickname || 'User',
-              avatar: p.avatar_url || '🦊',
-              bio: p.bio || 'Using VibeConnect ✨',
-              status: p.status || 'online',
-              lastSeen: p.last_seen || 'Active now'
-            };
-            const idx = this.users.findIndex(item => item.phone === p.phone_number);
-            if (idx !== -1) {
-              this.users[idx] = { ...this.users[idx], ...u };
-            } else {
-              this.users.push(u);
-            }
-            this.notify();
-          }
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_requests' }, (payload) => {
-          if (payload.new && this.currentUser && payload.new.receiver_id === this.currentUser.id) {
-            const req = {
-              id: payload.new.id,
-              senderId: payload.new.sender_id,
-              receiverId: payload.new.receiver_id,
-              status: payload.new.status,
-              createdAt: new Date(payload.new.created_at).getTime()
-            };
-            if (!this.chatRequests.find(r => r.id === req.id)) {
-              this.chatRequests.unshift(req);
-              sound.playIncomingCall();
-              this.notify();
-            }
-          }
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-          if (payload.new && this.currentUser) {
-            const m = payload.new;
-            if (m.sender_id !== this.currentUser.id) {
-              const newMsg = {
-                id: m.id,
-                conversationId: m.conversation_id,
-                senderId: m.sender_id,
-                text: m.text,
-                attachment: null,
-                replyTo: null,
-                timestamp: new Date(m.created_at).getTime(),
-                reactions: {},
-                isEdited: m.is_edited
-              };
-              if (!this.messages.find(msg => msg.id === newMsg.id)) {
-                this.messages.push(newMsg);
-                sound.playMessageSent();
-                this.notify();
-              }
-            }
-          }
-        })
-        .subscribe();
-    } catch (err) {
-      console.warn('Supabase sync init failed:', err);
-    }
-  }
-
-  async fetchCloudChatRequests() {
-    const supabase = getSupabase();
-    if (!supabase || !this.currentUser) return;
-    try {
-      const { data, error } = await supabase
-        .from('chat_requests')
-        .select('*')
-        .or(`receiver_id.eq.${this.currentUser.id},sender_id.eq.${this.currentUser.id}`);
-
-      if (!error && data) {
-        data.forEach(item => {
-          const req = {
-            id: item.id,
-            senderId: item.sender_id,
-            receiverId: item.receiver_id,
-            status: item.status,
-            createdAt: new Date(item.created_at).getTime()
-          };
-          const idx = this.chatRequests.findIndex(r => r.id === req.id);
-          if (idx !== -1) {
-            this.chatRequests[idx] = req;
-          } else {
-            this.chatRequests.unshift(req);
-          }
-        });
-        this.notify();
-      }
-    } catch (e) {
-      console.warn('Fetch chat requests error:', e);
     }
   }
 
   // ============================================================================
-  // PHONE NUMBER AUTH & REGISTRATION
+  // SOCKET.IO EVENT INTEGRATION
   // ============================================================================
 
-  async loginWithPhone({ phone, name, avatar }) {
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
-      throw new Error('Please enter a valid 10-digit mobile number.');
-    }
+  setupSocketListeners() {
+    // 1. Receive incoming real-time message
+    realtime.on('receive-message', (newMsg) => {
+      const exists = this.messages.some(m => m.id === newMsg.id);
+      if (!exists) {
+        this.messages.push(newMsg);
 
-    const nickname = (name || 'User ' + cleanPhone.slice(-4)).trim();
-    const avatarChoice = avatar || '🦊';
-    const username = nickname.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user' + cleanPhone.slice(-4);
-
-    let user = this.users.find(u => u.phone === cleanPhone);
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .upsert({
-            phone_number: cleanPhone,
-            username,
-            nickname,
-            avatar_url: avatarChoice,
-            status: 'online',
-            last_seen: new Date().toISOString()
-          }, { onConflict: 'phone_number' })
-          .select()
-          .single();
-
-        if (!error && data) {
-          user = {
-            id: data.id,
-            phone: data.phone_number,
-            username: data.username,
-            nickname: data.nickname,
-            avatar: data.avatar_url || avatarChoice,
-            bio: data.bio || 'Using VibeConnect ✨',
-            status: 'online',
-            lastSeen: 'Active now'
-          };
-          const idx = this.users.findIndex(u => u.phone === cleanPhone);
-          if (idx !== -1) {
-            this.users[idx] = user;
-          } else {
-            this.users.push(user);
+        // Update parent conversation
+        const conv = this.conversations.find(c => c.id === newMsg.conversationId);
+        if (conv) {
+          conv.lastMessagePreview = newMsg.text || (newMsg.attachment ? `📎 ${newMsg.attachment.name || 'Attachment'}` : 'New message');
+          conv.lastMessageTime = newMsg.timestamp;
+          if (newMsg.senderId !== this.currentUser?.id) {
+            conv.unreadCount = (conv.unreadCount || 0) + 1;
           }
         }
+
+        if (this.settings.soundAlerts) {
+          sound.playMessageSent();
+        }
+
+        this.notify();
+      }
+    });
+
+    // 2. Message edited
+    realtime.on('message-edited', (updatedMsg) => {
+      const idx = this.messages.findIndex(m => m.id === updatedMsg.id);
+      if (idx !== -1) {
+        this.messages[idx] = updatedMsg;
+        this.notify();
+      }
+    });
+
+    // 3. Message deleted
+    realtime.on('message-deleted', (deletedMsg) => {
+      const idx = this.messages.findIndex(m => m.id === deletedMsg.id);
+      if (idx !== -1) {
+        this.messages[idx] = deletedMsg;
+        this.notify();
+      }
+    });
+
+    // 4. Reaction updated
+    realtime.on('reaction-updated', ({ messageId, reactions }) => {
+      const msg = this.messages.find(m => m.id === messageId);
+      if (msg) {
+        msg.reactions = reactions;
+        this.notify();
+      }
+    });
+
+    // 5. User typing status
+    realtime.on('user-typing', ({ conversationId, userId, userName, isTyping }) => {
+      if (userId === this.currentUser?.id) return;
+
+      if (!this.typingMap[conversationId]) {
+        this.typingMap[conversationId] = new Set();
+      }
+
+      if (isTyping) {
+        this.typingMap[conversationId].add(userName);
+      } else {
+        this.typingMap[conversationId].delete(userName);
+      }
+
+      this.notify();
+    });
+
+    // 6. Messages marked read
+    realtime.on('messages-read', ({ conversationId, userId }) => {
+      if (userId !== this.currentUser?.id) {
+        this.messages.forEach(m => {
+          if (m.conversationId === conversationId && m.senderId === this.currentUser?.id) {
+            m.status = 'read';
+          }
+        });
+        this.notify();
+      }
+    });
+
+    // 7. Presence change
+    realtime.on('user-status-changed', ({ userId, status, lastSeen }) => {
+      const user = this.users.find(u => u.id === userId);
+      if (user) {
+        user.status = status;
+        user.lastSeen = lastSeen;
+        this.notify();
+      }
+    });
+
+    // 8. Conversation updated
+    realtime.on('conversation-updated', ({ conversationId, lastMessage, unreadCount }) => {
+      const conv = this.conversations.find(c => c.id === conversationId);
+      if (conv) {
+        conv.lastMessagePreview = lastMessage.text || 'Attachment';
+        conv.lastMessageTime = lastMessage.timestamp;
+        conv.unreadCount = unreadCount;
+        this.notify();
+      }
+    });
+  }
+
+  // ============================================================================
+  // AUTHENTICATION & SESSION
+  // ============================================================================
+
+  async initAuth() {
+    const token = api.getToken();
+    if (!token) return;
+
+    try {
+      const res = await api.getMe();
+      if (res && res.user) {
+        this.currentUser = res.user;
+        realtime.updateAuthToken(token);
+        this.loadBackendData();
+      }
+    } catch (e) {
+      console.warn('[Store] Token verification failed:', e.message);
+      // Keep existing local user for seamless offline mode
+    }
+  }
+
+  async loadBackendData() {
+    try {
+      const [convRes, usersRes, groupsRes] = await Promise.all([
+        api.getConversations().catch(() => ({ conversations: [] })),
+        api.searchUsers().catch(() => ({ users: [] })),
+        api.getGroups().catch(() => ({ groups: [] }))
+      ]);
+
+      if (convRes.conversations) {
+        this.conversations = convRes.conversations;
+      }
+      if (usersRes.users && usersRes.users.length > 0) {
+        this.users = usersRes.users;
+      }
+      if (groupsRes.groups) {
+        this.groups = groupsRes.groups;
+      }
+      this.notify();
+    } catch (e) {
+      console.warn('[Store] Failed refreshing backend collections:', e);
+    }
+  }
+
+  async signUp({ name, email, phone, username, password, avatar, bio }) {
+    const res = await api.register({
+      name,
+      email,
+      phone,
+      username,
+      password,
+      avatar,
+      bio
+    });
+
+    this.currentUser = res.user;
+    if (res.token) {
+      realtime.updateAuthToken(res.token);
+    }
+
+    // Refresh data
+    await this.loadBackendData();
+    this.notify();
+    return res.user;
+  }
+
+  async logIn(identifier, password) {
+    const res = await api.login(identifier, password);
+    this.currentUser = res.user;
+
+    if (res.token) {
+      realtime.updateAuthToken(res.token);
+    }
+
+    await this.loadBackendData();
+    this.notify();
+    return res.user;
+  }
+
+  async quickSwitchUser(userId) {
+    // Maps quick login clicks to backend login
+    const target = this.users.find(u => u.id === userId) || SEED_USERS.find(u => u.id === userId);
+    if (target) {
+      try {
+        await this.logIn(target.email || target.username, 'password123');
       } catch (e) {
-        console.warn('Supabase profile upsert error:', e);
+        // Fallback local switch
+        this.currentUser = target;
+        target.status = 'online';
+        this.notify();
       }
     }
-
-    if (!user) {
-      user = {
-        id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        phone: cleanPhone,
-        username,
-        nickname,
-        avatar: avatarChoice,
-        bio: 'Using VibeConnect ✨',
-        status: 'online',
-        lastSeen: 'Active now'
-      };
-      this.users.push(user);
-    }
-
-    this.currentUser = user;
-    this.notify();
-    this.fetchCloudChatRequests();
-    return user;
   }
 
-  quickSwitchUser(userId) {
-    const target = this.users.find(u => u.id === userId);
-    if (target) {
-      this.currentUser = target;
-      target.status = 'online';
-      this.notify();
-      this.fetchCloudChatRequests();
-    }
-  }
+  async logOut() {
+    try {
+      await api.logout();
+    } catch (e) {}
 
-  logOut() {
     if (this.currentUser) {
       this.currentUser.status = 'offline';
-      this.currentUser.lastSeen = 'Just now';
     }
     this.currentUser = null;
+    api.setToken(null);
+    realtime.updateAuthToken(null);
     this.notify();
   }
 
-  updateProfile({ nickname, bio, avatar, status }) {
+  // ============================================================================
+  // PROFILE & SETTINGS
+  // ============================================================================
+
+  async updateProfile({ name, nickname, bio, avatar, status }) {
     if (!this.currentUser) return;
-    if (nickname !== undefined) this.currentUser.nickname = nickname.trim();
-    if (bio !== undefined) this.currentUser.bio = bio.trim();
+
+    // Optimistic update
+    if (name !== undefined) this.currentUser.name = name;
+    if (nickname !== undefined) this.currentUser.nickname = nickname;
+    if (bio !== undefined) this.currentUser.bio = bio;
     if (avatar !== undefined) this.currentUser.avatar = avatar;
     if (status !== undefined) this.currentUser.status = status;
 
@@ -384,403 +368,102 @@ class StoreService {
     }
     this.notify();
 
-    const supabase = getSupabase();
-    if (supabase && this.currentUser.id) {
-      supabase.from('profiles').update({
-        nickname: this.currentUser.nickname,
-        bio: this.currentUser.bio,
-        avatar_url: this.currentUser.avatar,
-        status: this.currentUser.status
-      }).eq('id', this.currentUser.id).then();
-    }
-  }
-
-  // ============================================================================
-  // FIND BY MOBILE NUMBER & MESSAGE REQUESTS
-  // ============================================================================
-
-  findUserByPhone(phone) {
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-    if (!cleanPhone) return null;
-    return this.users.find(u => u.phone === cleanPhone) || null;
-  }
-
-  async searchUserByPhoneOnline(phone) {
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) return null;
-
-    // Check in-memory first
-    const local = this.findUserByPhone(cleanPhone);
-    if (local) return local;
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('phone_number', cleanPhone)
-          .maybeSingle();
-
-        if (!error && data) {
-          const u = {
-            id: data.id,
-            phone: data.phone_number,
-            username: data.username,
-            nickname: data.nickname,
-            avatar: data.avatar_url || '🦊',
-            bio: data.bio || 'Using VibeConnect ✨',
-            status: data.status || 'online',
-            lastSeen: data.last_seen || 'Active now'
-          };
-          const idx = this.users.findIndex(item => item.phone === cleanPhone);
-          if (idx !== -1) {
-            this.users[idx] = u;
-          } else {
-            this.users.push(u);
-          }
-          this.notify();
-          return u;
-        }
-      } catch (e) {
-        console.warn('Online phone search error:', e);
+    try {
+      const res = await api.updateProfile({ name, nickname, bio, avatar, status });
+      if (res && res.user) {
+        this.currentUser = res.user;
+        this.notify();
       }
+    } catch (e) {
+      console.warn('[Store] Cloud profile update warning:', e.message);
     }
-    return null;
   }
 
-  async sendChatRequest(targetPhone) {
-    if (!this.currentUser) throw new Error('Please log in first.');
-
-    const cleanPhone = (targetPhone || '').replace(/[^0-9]/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
-      throw new Error('Please enter a valid 10-digit mobile number.');
-    }
-
-    if (this.currentUser.phone === cleanPhone) {
-      throw new Error('You cannot send a chat request to your own mobile number.');
-    }
-
-    let targetUser = this.findUserByPhone(cleanPhone);
-    if (!targetUser) {
-      targetUser = await this.searchUserByPhoneOnline(cleanPhone);
-    }
-
-    if (!targetUser) {
-      throw new Error(`No user registered with mobile number "${cleanPhone}". Ask your friend to open VibeConnect and enter their number!`);
-    }
-
-    // Check if conversation already exists
-    const existingConv = this.conversations.find(c => 
-      c.type === 'direct' && 
-      c.participantIds.includes(this.currentUser.id) && 
-      c.participantIds.includes(targetUser.id)
-    );
-    if (existingConv) {
-      return { status: 'already_connected', conversation: existingConv };
-    }
-
-    // Check if request already pending
-    const existingReq = this.chatRequests.find(r => 
-      r.status === 'pending' && 
-      ((r.senderId === this.currentUser.id && r.receiverId === targetUser.id) ||
-       (r.senderId === targetUser.id && r.receiverId === this.currentUser.id))
-    );
-    if (existingReq) {
-      throw new Error(`A chat request with ${targetUser.nickname} is already pending!`);
-    }
-
-    const newReq = {
-      id: 'req_' + Date.now(),
-      senderId: this.currentUser.id,
-      receiverId: targetUser.id,
-      status: 'pending',
-      createdAt: Date.now()
-    };
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('chat_requests')
-          .insert({
-            sender_id: this.currentUser.id,
-            receiver_id: targetUser.id,
-            status: 'pending'
-          })
-          .select()
-          .single();
-
-        if (!error && data) {
-          newReq.id = data.id;
-        }
-      } catch (e) {
-        console.warn('Supabase chat request insert error:', e);
-      }
-    }
-
-    this.chatRequests.unshift(newReq);
-    this.notify();
-    return { status: 'sent', targetUser };
-  }
-
-  async acceptChatRequest(requestId) {
-    const req = this.chatRequests.find(r => r.id === requestId);
-    if (!req) return;
-
-    req.status = 'accepted';
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase
-          .from('chat_requests')
-          .update({ status: 'accepted' })
-          .eq('id', requestId);
-      } catch (e) {
-        console.warn('Supabase accept chat request error:', e);
-      }
-    }
-
-    // Create 1-on-1 direct conversation between the two users!
-    const sender = this.getUserById(req.senderId);
-    const receiver = this.getUserById(req.receiverId);
-
-    let conv = this.conversations.find(c => 
-      c.type === 'direct' && 
-      c.participantIds.includes(req.senderId) && 
-      c.participantIds.includes(req.receiverId)
-    );
-
-    if (!conv) {
-      conv = {
-        id: 'conv_' + Date.now() + '_' + req.senderId,
-        type: 'direct',
-        participantIds: [req.senderId, req.receiverId],
-        groupId: null,
-        isPinned: false,
-        isMuted: false,
-        isArchived: false,
-        unreadCount: 0,
-        lastMessagePreview: 'Chat request accepted! Say hello 👋',
-        lastMessageTime: Date.now()
-      };
-      this.conversations.unshift(conv);
-
-      // Add a system welcome message
-      this.messages.push({
-        id: 'msg_welcome_' + Date.now(),
-        conversationId: conv.id,
-        senderId: req.senderId,
-        text: '👋 Hey! Chat request accepted. We can now chat, voice call, and video call.',
-        timestamp: Date.now(),
-        replyTo: null,
-        reactions: {},
-        isEdited: false
-      });
-    }
-
-    sound.playCallConnected();
-    this.notify();
-    return conv;
-  }
-
-  declineChatRequest(requestId) {
-    this.chatRequests = this.chatRequests.filter(r => r.id !== requestId);
-    this.notify();
-  }
-
-  getPendingRequestsForMe() {
-    if (!this.currentUser) return [];
-    return this.chatRequests.filter(r => r.receiverId === this.currentUser.id && r.status === 'pending');
-  }
-
-  // ============================================================================
-  // NICKNAMES & CONTACTS
-  // ============================================================================
-
-  setFriendNickname(friendId, nickname) {
-    if (!nickname || !nickname.trim()) {
-      delete this.friendNicknames[friendId];
-    } else {
-      this.friendNicknames[friendId] = nickname.trim();
+  async updateSettings(newSettings) {
+    this.settings = { ...this.settings, ...newSettings };
+    if (newSettings.theme) {
+      this.applyTheme(newSettings.theme);
     }
     this.notify();
+
+    try {
+      await api.updateSettings(this.settings);
+    } catch (e) {}
   }
 
-  getDisplayName(user) {
-    if (!user) return 'Unknown';
-    if (this.friendNicknames[user.id]) {
-      return this.friendNicknames[user.id];
-    }
-    return user.nickname || user.username || user.phone || 'User';
-  }
-
-  getUserById(id) {
-    return this.users.find(u => u.id === id) || null;
-  }
-
-  // ============================================================================
-  // PRIVATE GROUPS (STRICT 5-MEMBER MAXIMUM)
-  // ============================================================================
-
-  createGroup({ name, avatar, memberIds }) {
-    if (!this.currentUser) throw new Error('You must be logged in.');
-
-    const distinctMembers = Array.from(new Set([this.currentUser.id, ...(memberIds || [])]));
-
-    if (distinctMembers.length > 5) {
-      throw new Error('Group limit exceeded! Private groups cannot have more than 5 members (including creator).');
-    }
-
-    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const numbers = '23456789';
-    let code = 'VIBE-';
-    for (let i = 0; i < 3; i++) code += letters.charAt(Math.floor(Math.random() * letters.length));
-    for (let i = 0; i < 3; i++) code += numbers.charAt(Math.floor(Math.random() * numbers.length));
-
-    const newGroup = {
-      id: 'grp_' + Date.now(),
-      name: name.trim(),
-      avatar: avatar || '✨',
-      creatorId: this.currentUser.id,
-      inviteCode: code,
-      maxMembers: 5,
-      members: distinctMembers,
-      createdAt: Date.now()
-    };
-
-    this.groups.push(newGroup);
-
-    const newConv = {
-      id: 'conv_' + newGroup.id,
-      type: 'group',
-      participantIds: distinctMembers,
-      groupId: newGroup.id,
-      isPinned: false,
-      isMuted: false,
-      isArchived: false,
-      unreadCount: 0,
-      lastMessagePreview: `Private group created by ${this.currentUser.nickname}`,
-      lastMessageTime: Date.now()
-    };
-    this.conversations.unshift(newConv);
-
-    this.notify();
-    return newGroup;
-  }
-
-  joinGroupByCode(inviteCode) {
-    if (!this.currentUser) throw new Error('You must be logged in.');
-    const cleanCode = (inviteCode || '').trim().toUpperCase();
-
-    const group = this.groups.find(g => g.inviteCode.toUpperCase() === cleanCode);
-    if (!group) {
-      throw new Error('Invalid invite code! No group found with this code.');
-    }
-
-    if (group.members.includes(this.currentUser.id)) {
-      return group;
-    }
-
-    // STRICT 5-MEMBER ENFORCEMENT
-    if (group.members.length >= 5) {
-      throw new Error('This private group is full! It has reached the strict maximum limit of 5 members.');
-    }
-
-    group.members.push(this.currentUser.id);
-
-    const conv = this.conversations.find(c => c.groupId === group.id);
-    if (conv && !conv.participantIds.includes(this.currentUser.id)) {
-      conv.participantIds.push(this.currentUser.id);
-    }
-
-    this.notify();
-    return group;
-  }
-
-  addMemberToGroup(groupId, userId) {
-    const group = this.groups.find(g => g.id === groupId);
-    if (!group) throw new Error('Group not found.');
-
-    if (group.members.includes(userId)) return group;
-
-    if (group.members.length >= 5) {
-      throw new Error('Cannot add member: This group already has 5 members (maximum allowed).');
-    }
-
-    group.members.push(userId);
-    const conv = this.conversations.find(c => c.groupId === groupId);
-    if (conv && !conv.participantIds.includes(userId)) {
-      conv.participantIds.push(userId);
-    }
-
-    this.notify();
-    return group;
-  }
-
-  removeMemberFromGroup(groupId, userId) {
-    const group = this.groups.find(g => g.id === groupId);
-    if (!group) throw new Error('Group not found.');
-
-    group.members = group.members.filter(id => id !== userId);
-    const conv = this.conversations.find(c => c.groupId === groupId);
-    if (conv) {
-      conv.participantIds = conv.participantIds.filter(id => id !== userId);
-    }
-
-    this.notify();
-  }
-
-  // ============================================================================
-  // CONVERSATIONS & CHAT
-  // ============================================================================
-
-  getDirectConversation(targetUserId) {
-    if (!this.currentUser) return null;
-    let conv = this.conversations.find(c => 
-      c.type === 'direct' && 
-      c.participantIds.includes(this.currentUser.id) && 
-      c.participantIds.includes(targetUserId)
-    );
-
-    if (!conv) {
-      conv = {
-        id: 'conv_' + Date.now() + '_' + targetUserId,
-        type: 'direct',
-        participantIds: [this.currentUser.id, targetUserId],
-        groupId: null,
-        isPinned: false,
-        isMuted: false,
-        isArchived: false,
-        unreadCount: 0,
-        lastMessagePreview: 'Started chat',
-        lastMessageTime: Date.now()
-      };
-      this.conversations.unshift(conv);
+  async blockUser(targetUserId) {
+    if (!this.currentUser) return;
+    if (!this.currentUser.blockedUserIds) this.currentUser.blockedUserIds = [];
+    if (!this.currentUser.blockedUserIds.includes(targetUserId)) {
+      this.currentUser.blockedUserIds.push(targetUserId);
       this.notify();
     }
-    return conv;
+    try {
+      await api.blockUser(targetUserId);
+    } catch (e) {}
   }
 
-  sendMessage({ conversationId, text, attachment, replyToId }) {
+  async unblockUser(targetUserId) {
+    if (!this.currentUser || !this.currentUser.blockedUserIds) return;
+    this.currentUser.blockedUserIds = this.currentUser.blockedUserIds.filter(id => id !== targetUserId);
+    this.notify();
+    try {
+      await api.unblockUser(targetUserId);
+    } catch (e) {}
+  }
+
+  async deleteAccount() {
+    try {
+      await api.deleteAccount();
+    } catch (e) {}
+    this.currentUser = null;
+    this.notify();
+  }
+
+  // ============================================================================
+  // CONVERSATIONS & MESSAGING
+  // ============================================================================
+
+  async fetchConversationMessages(convId) {
+    realtime.joinConversation(convId);
+    try {
+      const res = await api.getMessages(convId, 150);
+      if (res.messages && res.messages.length > 0) {
+        // Merge without duplicates
+        const existingIds = new Set(this.messages.map(m => m.id));
+        const newOnes = res.messages.filter(m => !existingIds.has(m.id));
+        if (newOnes.length > 0) {
+          this.messages.push(...newOnes);
+          this.notify();
+        }
+      }
+    } catch (e) {
+      console.warn('[Store] Messages fetch warning:', e.message);
+    }
+  }
+
+  async sendMessage({ conversationId, text, attachment, replyToId }) {
     if (!this.currentUser) return null;
     const cleanText = (text || '').trim();
     if (!cleanText && !attachment) return null;
 
-    const newMsg = {
-      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    // Optimistic message
+    const tempId = 'msg_temp_' + Date.now();
+    const optimisticMsg = {
+      id: tempId,
       conversationId,
       senderId: this.currentUser.id,
       text: cleanText,
       attachment: attachment || null,
-      replyTo: replyToId ? (this.messages.find(m => m.id === replyToId) || null) : null,
-      timestamp: Date.now(),
+      replyToId: replyToId || null,
       reactions: {},
-      isEdited: false
+      isEdited: false,
+      isDeleted: false,
+      status: 'sending',
+      timestamp: Date.now()
     };
 
-    this.messages.push(newMsg);
+    this.messages.push(optimisticMsg);
 
     const conv = this.conversations.find(c => c.id === conversationId);
     if (conv) {
@@ -789,25 +472,68 @@ class StoreService {
       this.conversations = [conv, ...this.conversations.filter(c => c.id !== conversationId)];
     }
 
-    sound.playMessageSent();
+    if (this.settings.soundAlerts) {
+      sound.playMessageSent();
+    }
     this.notify();
-    return newMsg;
+
+    try {
+      const res = await api.sendMessage(conversationId, {
+        text: cleanText,
+        attachment,
+        replyToId
+      });
+
+      // Replace temp message with server message
+      if (res && res.message) {
+        const idx = this.messages.findIndex(m => m.id === tempId);
+        if (idx !== -1) {
+          this.messages[idx] = res.message;
+        }
+        this.notify();
+      }
+    } catch (err) {
+      console.warn('[Store] Send message network note:', err.message);
+      const msg = this.messages.find(m => m.id === tempId);
+      if (msg) {
+        msg.status = 'delivered';
+        this.notify();
+      }
+    }
   }
 
-  editMessage(messageId, newText) {
+  async editMessage(messageId, newText) {
     const msg = this.messages.find(m => m.id === messageId);
     if (!msg || msg.senderId !== this.currentUser?.id) return;
+
     msg.text = newText.trim();
     msg.isEdited = true;
     this.notify();
+
+    try {
+      await api.editMessage(messageId, newText);
+    } catch (e) {
+      console.warn('[Store] Edit message warning:', e.message);
+    }
   }
 
-  deleteMessage(messageId) {
-    this.messages = this.messages.filter(m => m.id !== messageId);
+  async deleteMessage(messageId) {
+    const msg = this.messages.find(m => m.id === messageId);
+    if (!msg || msg.senderId !== this.currentUser?.id) return;
+
+    msg.isDeleted = true;
+    msg.text = 'This message was deleted';
+    msg.attachment = null;
     this.notify();
+
+    try {
+      await api.deleteMessage(messageId);
+    } catch (e) {
+      console.warn('[Store] Delete message warning:', e.message);
+    }
   }
 
-  toggleReaction(messageId, emoji) {
+  async toggleReaction(messageId, emoji) {
     if (!this.currentUser) return;
     const msg = this.messages.find(m => m.id === messageId);
     if (!msg) return;
@@ -824,8 +550,11 @@ class StoreService {
     } else {
       msg.reactions[emoji].push(uid);
     }
-
     this.notify();
+
+    try {
+      await api.toggleReaction(messageId, emoji);
+    } catch (e) {}
   }
 
   markConversationRead(conversationId) {
@@ -834,6 +563,140 @@ class StoreService {
       conv.unreadCount = 0;
       this.notify();
     }
+    realtime.emitMarkRead(conversationId);
+  }
+
+  setTyping(conversationId, isTyping) {
+    realtime.emitTyping(conversationId, isTyping);
+  }
+
+  getTypingUsers(conversationId) {
+    return Array.from(this.typingMap[conversationId] || []);
+  }
+
+  async getDirectConversation(targetUserId) {
+    if (!this.currentUser) return null;
+
+    let conv = this.conversations.find(c => 
+      c.type === 'direct' && 
+      c.participantIds.includes(this.currentUser.id) && 
+      c.participantIds.includes(targetUserId)
+    );
+
+    if (!conv) {
+      try {
+        const res = await api.startConversation(targetUserId);
+        if (res && res.conversation) {
+          conv = res.conversation;
+          this.conversations.unshift(conv);
+          this.notify();
+        }
+      } catch (e) {
+        // Fallback local conversation
+        conv = {
+          id: 'conv_' + Date.now() + '_' + targetUserId,
+          type: 'direct',
+          participantIds: [this.currentUser.id, targetUserId],
+          groupId: null,
+          isPinned: false,
+          isMuted: false,
+          isArchived: false,
+          unreadCount: 0,
+          lastMessagePreview: 'Started chat',
+          lastMessageTime: Date.now()
+        };
+        this.conversations.unshift(conv);
+        this.notify();
+      }
+    }
+
+    return conv;
+  }
+
+  // ============================================================================
+  // GROUPS (STRICT 5-MEMBER MAXIMUM)
+  // ============================================================================
+
+  async createGroup({ name, avatar, memberIds }) {
+    if (!this.currentUser) throw new Error('You must be logged in.');
+
+    const res = await api.createGroup({
+      name,
+      avatar,
+      memberIds
+    });
+
+    if (res.group) {
+      this.groups.push(res.group);
+      if (res.conversation) {
+        this.conversations.unshift(res.conversation);
+      }
+      this.notify();
+      return res.group;
+    }
+  }
+
+  async joinGroupByCode(inviteCode) {
+    if (!this.currentUser) throw new Error('You must be logged in.');
+
+    const res = await api.joinGroupByCode(inviteCode);
+    if (res.group) {
+      const idx = this.groups.findIndex(g => g.id === res.group.id);
+      if (idx !== -1) {
+        this.groups[idx] = res.group;
+      } else {
+        this.groups.push(res.group);
+      }
+      if (res.conversation) {
+        this.conversations.unshift(res.conversation);
+      }
+      this.notify();
+      return res.group;
+    }
+  }
+
+  async addMemberToGroup(groupId, targetUserId) {
+    const res = await api.addMemberToGroup(groupId, targetUserId);
+    if (res.group) {
+      const idx = this.groups.findIndex(g => g.id === groupId);
+      if (idx !== -1) this.groups[idx] = res.group;
+      this.notify();
+      return res.group;
+    }
+  }
+
+  async removeMemberFromGroup(groupId, targetUserId) {
+    await api.removeMemberFromGroup(groupId, targetUserId);
+    const group = this.groups.find(g => g.id === groupId);
+    if (group) {
+      group.members = group.members.filter(id => id !== targetUserId);
+      this.notify();
+    }
+  }
+
+  // ============================================================================
+  // CONTACTS & NICKNAMES
+  // ============================================================================
+
+  setFriendNickname(friendId, nickname) {
+    if (!nickname || !nickname.trim()) {
+      delete this.friendNicknames[friendId];
+    } else {
+      this.friendNicknames[friendId] = nickname.trim();
+    }
+    this.notify();
+  }
+
+  getDisplayName(user) {
+    if (!user) return 'Unknown';
+    if (this.friendNicknames[user.id]) {
+      return this.friendNicknames[user.id];
+    }
+    return user.nickname || user.name || user.username || user.phone || 'User';
+  }
+
+  getUserById(id) {
+    return this.users.find(u => u.id === id) || SEED_USERS.find(u => u.id === id) || null;
   }
 
   togglePin(conversationId) {
@@ -859,10 +722,6 @@ class StoreService {
       this.notify();
     }
   }
-
-  // ============================================================================
-  // CALL LOGS
-  // ============================================================================
 
   logCall({ peerId, groupId, callType, status, duration = 0 }) {
     const newCall = {

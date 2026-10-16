@@ -37,29 +37,29 @@ export default function GroupInfoModal({ isOpen, onClose, groupId }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRemoveMember = (userId) => {
+  const handleRemoveMember = async (userId) => {
     if (confirm('Remove this member from the private group?')) {
       try {
-        store.removeMemberFromGroup(groupId, userId);
+        await store.removeMemberFromGroup(groupId, userId);
       } catch (err) {
         setError(err.message);
       }
     }
   };
 
-  const handleAddMember = (userId) => {
+  const handleAddMember = async (userId) => {
     setError('');
     try {
-      store.addMemberToGroup(groupId, userId);
+      await store.addMemberToGroup(groupId, userId);
       setShowAddMember(false);
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
     if (confirm('Are you sure you want to leave this private group?')) {
-      store.removeMemberFromGroup(groupId, currentUser.id);
+      await store.removeMemberFromGroup(groupId, currentUser.id);
       onClose();
     }
   };

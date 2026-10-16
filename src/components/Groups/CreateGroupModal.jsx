@@ -37,7 +37,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }) {
     }
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -52,7 +52,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }) {
     }
 
     try {
-      const group = store.createGroup({
+      const group = await store.createGroup({
         name,
         avatar,
         memberIds: selectedFriendIds

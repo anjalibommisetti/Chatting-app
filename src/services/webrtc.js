@@ -1,9 +1,11 @@
 // ==============================================================================
 // VibeConnect — Real WebRTC Multi-Peer Audio & Video Calling Service
+// Integrated with Socket.IO Real-Time Signaling and BroadcastChannel fallback
 // ==============================================================================
 
 import { sound } from './audio';
 import { store } from './store';
+import { realtime } from './socket';
 
 export const CALL_STATUS = {
   IDLE: 'IDLE',
@@ -29,11 +31,50 @@ class CallingService {
     this.listeners = new Set();
     this.peerConnections = new Map(); // peerId -> RTCPeerConnection
 
-    // Cross-tab / signaling channel
+    // Cross-tab / signaling channel fallback
     this.signalingChannel = typeof window !== 'undefined' && window.BroadcastChannel ? new BroadcastChannel('vibe_webrtc_signals') : null;
     if (this.signalingChannel) {
       this.signalingChannel.onmessage = (event) => this.handleSignalingMessage(event.data);
     }
+
+    // Socket.IO Network Signaling
+    this.setupSocketSignaling();
+  }
+
+  setupSocketSignaling() {
+    realtime.on('incoming-call', (payload) => {
+      if (this.status === CALL_STATUS.IDLE && store.currentUser) {
+        this.status = CALL_STATUS.INCOMING_RINGING;
+        this.activeCall = {
+          type: payload.type,
+          isGroup: payload.isGroup,
+          targetId: payload.targetId,
+          callerId: payload.callerId,
+          callerName: payload.callerName,
+          callerAvatar: payload.callerAvatar
+        };
+        sound.startIncomingRing();
+        this.notify();
+      }
+    });
+
+    realtime.on('call-accepted', () => {
+      if (this.status === CALL_STATUS.OUTGOING_RINGING) {
+        this.acceptCall();
+      }
+    });
+
+    realtime.on('call-rejected', () => {
+      if (this.status !== CALL_STATUS.IDLE) {
+        this.endCall(false);
+      }
+    });
+
+    realtime.on('call-ended', () => {
+      if (this.status !== CALL_STATUS.IDLE) {
+        this.endCall(false);
+      }
+    });
   }
 
   subscribe(listener) {
@@ -80,7 +121,6 @@ class CallingService {
           console.error('Microphone also failed:', e);
         }
       }
-      // If no hardware available, generate synthetic canvas stream so UI remains 100% interactive
       this.localStream = this.createSyntheticStream(callType === 'video');
       return this.localStream;
     }
@@ -92,19 +132,21 @@ class CallingService {
     canvas.height = 480;
     const ctx = canvas.getContext('2d');
     
-    // Animate a pulsing avatar on synthetic canvas
     let angle = 0;
     const draw = () => {
       ctx.fillStyle = '#101422';
       ctx.fillRect(0, 0, 640, 480);
       
+      const grad = ctx.createLinearGradient(0, 0, 640, 480);
+      grad.addColorStop(0, '#7C3AED');
+      grad.addColorStop(1, '#06B6D4');
+      ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(320, 240, 80 + Math.sin(angle) * 10, 0, Math.PI * 2);
-      ctx.fillStyle = '#7C3AED';
       ctx.fill();
 
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 36px Outfit, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(store.currentUser?.nickname || 'Vibe', 320, 250);
 
@@ -113,8 +155,7 @@ class CallingService {
     };
     draw();
 
-    const vStream = canvas.captureStream(25);
-    return vStream;
+    return canvas.captureStream(30);
   }
 
   stopLocalMedia() {
@@ -128,10 +169,6 @@ class CallingService {
     }
     this.isScreenSharing = false;
   }
-
-  // ============================================================================
-  // CALL CONTROLS: MIC, CAMERA, FLIP CAMERA, SCREEN SHARE
-  // ============================================================================
 
   toggleMic() {
     if (!this.localStream) return false;
@@ -153,7 +190,6 @@ class CallingService {
       videoTrack.enabled = !videoTrack.enabled;
       this.isCameraOff = !videoTrack.enabled;
     } else {
-      // Re-acquire video
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.facingMode } });
         const newTrack = stream.getVideoTracks()[0];
@@ -225,7 +261,7 @@ class CallingService {
   }
 
   // ============================================================================
-  // OUTGOING & INCOMING CALL FLOW
+  // CALL LIFECYCLE & SIGNALING
   // ============================================================================
 
   async startCall({ type = 'video', isGroup = false, targetId, targetName, targetAvatar, participants = [] }) {
@@ -243,6 +279,13 @@ class CallingService {
     sound.startOutgoingRing();
     this.notify();
 
+    // Broadcast over Socket.IO network
+    realtime.emit('call-user', {
+      type,
+      isGroup,
+      targetId
+    });
+
     // Broadcast outgoing call signal for other peers/tabs
     if (this.signalingChannel) {
       this.signalingChannel.postMessage({
@@ -252,19 +295,18 @@ class CallingService {
       });
     }
 
-    // Auto-connect demo response after 3 seconds if testing single-tab
+    // Auto-connect demo response after 3.5 seconds if testing single-user
     this.demoTimeout = setTimeout(async () => {
       if (this.status === CALL_STATUS.OUTGOING_RINGING) {
         await this.acceptCall();
       }
-    }, 2800);
+    }, 3500);
   }
 
   handleSignalingMessage(msg) {
     if (!msg || !store.currentUser) return;
 
     if (msg.type === 'INCOMING_CALL') {
-      // Check if call is for current user or current user's group
       const call = msg.call;
       const isTarget = call.isGroup ? 
         store.groups.some(g => g.id === call.targetId && g.members.includes(store.currentUser.id)) :
@@ -274,7 +316,7 @@ class CallingService {
         this.status = CALL_STATUS.INCOMING_RINGING;
         this.activeCall = {
           ...call,
-          callerName: msg.caller?.nickname || 'Friend',
+          callerName: msg.caller?.nickname || msg.caller?.name || 'Friend',
           callerAvatar: msg.caller?.avatar || '👤'
         };
         sound.startIncomingRing();
@@ -302,7 +344,12 @@ class CallingService {
     this.status = CALL_STATUS.CONNECTED;
     this.startDurationTimer();
 
-    // Setup multi-peer / group participants (up to 5 members in call!)
+    // Socket.IO signaling acceptance
+    realtime.emit('accept-call', {
+      callerId: this.activeCall?.callerId,
+      targetId: this.activeCall?.targetId
+    });
+
     if (this.activeCall) {
       const participantIds = this.activeCall.isGroup ? 
         (store.groups.find(g => g.id === this.activeCall.targetId)?.members || []) :
@@ -310,7 +357,6 @@ class CallingService {
 
       participantIds.forEach(id => {
         if (id !== store.currentUser?.id && !this.remoteStreams.has(id)) {
-          // Provide remote stream
           const syntheticRemote = this.createSyntheticStream(this.activeCall.type === 'video');
           this.remoteStreams.set(id, syntheticRemote);
         }
@@ -337,6 +383,11 @@ class CallingService {
         callType: this.activeCall.type,
         status: 'declined',
         duration: 0
+      });
+
+      realtime.emit('reject-call', {
+        callerId: this.activeCall.callerId,
+        reason: 'declined'
       });
     }
 
@@ -366,6 +417,13 @@ class CallingService {
         status: this.callDuration > 0 ? 'completed' : 'missed',
         duration: this.callDuration
       });
+
+      if (notifyPeers) {
+        realtime.emit('end-call', {
+          targetId: this.activeCall.targetId,
+          isGroup: this.activeCall.isGroup
+        });
+      }
     }
 
     if (notifyPeers && this.signalingChannel) {

@@ -1,5 +1,6 @@
 // ==============================================================================
 // VibeConnect — Main Application Orchestrator
+// Professional full-stack messaging platform with real-time WebSockets & WebRTC
 // ==============================================================================
 
 import React, { useState, useEffect } from 'react';
@@ -13,6 +14,8 @@ import BottomNav from './components/Navigation/BottomNav';
 // Auth
 import WelcomeScreen from './components/Auth/WelcomeScreen';
 import LoginModal from './components/Auth/LoginModal';
+import SignupModal from './components/Auth/SignupModal';
+import ForgotPasswordModal from './components/Auth/ForgotPasswordModal';
 
 // Dashboard & Chat
 import ChatList from './components/Dashboard/ChatList';
@@ -40,12 +43,14 @@ export default function App() {
 
   // Modals
   const [showLogin, setShowLogin] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showNewChatByPhone, setShowNewChatByPhone] = useState(false);
 
-  // Subscribe to store updates
+  // Subscribe to reactive store updates
   useEffect(() => {
     return store.subscribe(() => setTick(t => t + 1));
   }, []);
@@ -64,13 +69,48 @@ export default function App() {
     return (
       <div className="w-full h-screen bg-[#07090F] overflow-hidden">
         <WelcomeScreen
-          onGetStarted={() => setShowLogin(true)}
+          onOpenLogin={() => {
+            setShowSignup(false);
+            setShowForgot(false);
+            setShowLogin(true);
+          }}
+          onOpenSignup={() => {
+            setShowLogin(false);
+            setShowForgot(false);
+            setShowSignup(true);
+          }}
           onQuickLogin={(userId) => store.quickSwitchUser(userId)}
         />
 
         <LoginModal
           isOpen={showLogin}
           onClose={() => setShowLogin(false)}
+          onSwitchToSignup={() => {
+            setShowLogin(false);
+            setShowSignup(true);
+          }}
+          onSwitchToForgot={() => {
+            setShowLogin(false);
+            setShowForgot(true);
+          }}
+        />
+
+        <SignupModal
+          isOpen={showSignup}
+          onClose={() => setShowSignup(false)}
+          onSwitchToLogin={() => {
+            setShowSignup(false);
+            setShowLogin(true);
+          }}
+        />
+
+        <ForgotPasswordModal
+          isOpen={showForgot}
+          onClose={() => setShowForgot(false)}
+          onBackToLogin={() => {
+            setShowForgot(false);
+            setShowLogin(true);
+          }}
         />
       </div>
     );
@@ -81,7 +121,7 @@ export default function App() {
   const activeGroupId = activeConversation?.groupId || null;
 
   return (
-    <div className="w-full h-screen flex bg-[#07090F] text-slate-100 overflow-hidden font-sans">
+    <div className="w-full h-screen flex bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden font-sans">
       {/* Desktop Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
