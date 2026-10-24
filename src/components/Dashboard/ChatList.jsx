@@ -80,31 +80,20 @@ export default function ChatList({
       <div className="p-4 border-b border-[var(--border-color)] space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-heading font-extrabold text-xl text-[var(--text-primary)] tracking-tight flex items-center gap-2">
-            <span>Chats</span>
+            <span>Duo Chat</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
+              Live
+            </span>
           </h2>
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={onOpenNewChatByPhone}
+              onClick={() => store.lockVault()}
               className="p-2 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 text-purple-400 border border-purple-500/30 transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
-              title="New Chat by Contact"
-            >
-              <MessageSquarePlus className="w-4 h-4" />
-              <span className="hidden lg:inline text-[11px]">+ Chat</span>
-            </button>
-            <button
-              onClick={onOpenJoinGroup}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-              title="Join Group with Code"
+              title="Lock Vault (Esc)"
             >
               <KeyRound className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onOpenCreateGroup}
-              className="p-2 rounded-xl bg-vibe-gradient hover:opacity-95 text-white transition-colors shadow-sm shadow-purple-600/30 cursor-pointer"
-              title="New Private Group (Max 5)"
-            >
-              <Plus className="w-4 h-4" />
+              <span className="text-[11px]">Lock</span>
             </button>
           </div>
         </div>
@@ -116,31 +105,9 @@ export default function ChatList({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats, contacts, or messages..."
+            placeholder="Search messages or partner..."
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-muted)] text-xs focus:outline-none focus:border-purple-500 transition-colors"
           />
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-1 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-color)] text-xs">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'direct', label: 'Direct' },
-            { id: 'groups', label: 'Groups' },
-            { id: 'unread', label: 'Unread' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterTab(tab.id)}
-              className={`flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer text-center truncate ${
-                filterTab === tab.id
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
         </div>
       </div>
 

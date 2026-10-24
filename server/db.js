@@ -43,9 +43,7 @@ export function verifyPassword(password, salt, hash) {
 
 // Default Seed Users (all have password: password123)
 const DEFAULT_SALT = 'e5b7218ac93f412d8a546b81d6d3765e';
-const DEFAULT_HASH = hashPassword('password123', DEFAULT_SALT).hash;
-
-const INITIAL_DB = {
+const DEFAULT_HASH = hashPassword('password123', DEFAULT_SALT).hash;const INITIAL_DB = {
   users: [
     {
       id: 'usr_anju',
@@ -57,7 +55,7 @@ const INITIAL_DB = {
       passwordHash: DEFAULT_HASH,
       salt: DEFAULT_SALT,
       avatar: '🦊',
-      bio: 'Building the next-gen private messenger ✨',
+      bio: 'Private Duo Messenger ✨',
       status: 'online',
       lastSeen: 'Active now',
       blockedUserIds: [],
@@ -69,16 +67,16 @@ const INITIAL_DB = {
       createdAt: Date.now() - 86400000 * 3
     },
     {
-      id: 'usr_priya',
-      name: 'Priya Sharma',
-      email: 'priya@vibeconnect.io',
+      id: 'usr_partner',
+      name: 'Partner (Member 2)',
+      email: 'partner@vibeconnect.io',
       phone: '9876543211',
-      username: 'priya',
-      nickname: 'Priya',
+      username: 'partner',
+      nickname: 'Partner',
       passwordHash: DEFAULT_HASH,
       salt: DEFAULT_SALT,
       avatar: '🌸',
-      bio: 'Coffee & Code ☕',
+      bio: 'Always connected in our private space 💫',
       status: 'online',
       lastSeen: 'Active now',
       blockedUserIds: [],
@@ -88,180 +86,25 @@ const INITIAL_DB = {
         soundAlerts: true
       },
       createdAt: Date.now() - 86400000 * 2
-    },
-    {
-      id: 'usr_alex',
-      name: 'Alex Rivera',
-      email: 'alex@vibeconnect.io',
-      phone: '9876543212',
-      username: 'alex',
-      nickname: 'Alex',
-      passwordHash: DEFAULT_HASH,
-      salt: DEFAULT_SALT,
-      avatar: '⚡',
-      bio: 'Available for video & voice calls 🎧',
-      status: 'online',
-      lastSeen: 'Active now',
-      blockedUserIds: [],
-      settings: {
-        theme: 'dark',
-        readReceipts: true,
-        soundAlerts: true
-      },
-      createdAt: Date.now() - 86400000 * 1
-    },
-    {
-      id: 'usr_sam',
-      name: 'Sammy Taylor',
-      email: 'sammy@vibeconnect.io',
-      phone: '9876543213',
-      username: 'sammy',
-      nickname: 'Sammy',
-      passwordHash: DEFAULT_HASH,
-      salt: DEFAULT_SALT,
-      avatar: '🚀',
-      bio: 'Exploring tech and decentralized protocols!',
-      status: 'away',
-      lastSeen: '15m ago',
-      blockedUserIds: [],
-      settings: {
-        theme: 'dark',
-        readReceipts: true,
-        soundAlerts: true
-      },
-      createdAt: Date.now() - 3600000 * 4
     }
   ],
-  groups: [
-    {
-      id: 'grp_core_team',
-      name: 'Core Dev Circle',
-      avatar: '⚡',
-      creatorId: 'usr_anju',
-      inviteCode: 'VIBE-DEV1',
-      maxMembers: 5,
-      members: ['usr_anju', 'usr_priya', 'usr_alex'],
-      createdAt: Date.now() - 86400000
-    }
-  ],
+  groups: [],
   conversations: [
     {
-      id: 'conv_direct_priya',
+      id: 'conv_duo_main',
       type: 'direct',
-      participantIds: ['usr_anju', 'usr_priya'],
+      participantIds: ['usr_anju', 'usr_partner'],
       groupId: null,
       isPinned: true,
       isMuted: false,
       isArchived: false,
-      unreadCounts: { usr_anju: 0, usr_priya: 0 },
-      lastMessagePreview: 'Sounds great! I will test the voice calling now 🎧',
-      lastMessageTime: Date.now() - 1000 * 60 * 5,
-      createdAt: Date.now() - 86400000 * 2
-    },
-    {
-      id: 'conv_direct_alex',
-      type: 'direct',
-      participantIds: ['usr_anju', 'usr_alex'],
-      groupId: null,
-      isPinned: false,
-      isMuted: false,
-      isArchived: false,
-      unreadCounts: { usr_anju: 0, usr_alex: 0 },
-      lastMessagePreview: 'Hey! Are you ready for our 1-on-1 video call?',
-      lastMessageTime: Date.now() - 1000 * 60 * 35,
-      createdAt: Date.now() - 86400000 * 1
-    },
-    {
-      id: 'conv_grp_core_team',
-      type: 'group',
-      participantIds: ['usr_anju', 'usr_priya', 'usr_alex'],
-      groupId: 'grp_core_team',
-      isPinned: false,
-      isMuted: false,
-      isArchived: false,
-      unreadCounts: { usr_anju: 0, usr_priya: 0, usr_alex: 0 },
-      lastMessagePreview: 'Priya: Strict 5-member limit is fully enforced!',
-      lastMessageTime: Date.now() - 1000 * 60 * 12,
-      createdAt: Date.now() - 86400000
+      unreadCounts: { usr_anju: 0, usr_partner: 0 },
+      lastMessagePreview: '🔒 Duo Private Vault Active',
+      lastMessageTime: Date.now(),
+      createdAt: Date.now()
     }
   ],
-  messages: [
-    {
-      id: 'msg_init_1',
-      conversationId: 'conv_direct_priya',
-      senderId: 'usr_priya',
-      text: 'Hey Anju! The new UI redesign looks incredibly smooth. Love the WhatsApp & Telegram vibes! 🚀',
-      attachment: null,
-      replyToId: null,
-      reactions: { '❤️': ['usr_anju'] },
-      isEdited: false,
-      isDeleted: false,
-      status: 'read',
-      timestamp: Date.now() - 1000 * 60 * 25,
-      deliveredTo: ['usr_anju'],
-      readBy: ['usr_anju']
-    },
-    {
-      id: 'msg_init_2',
-      conversationId: 'conv_direct_priya',
-      senderId: 'usr_anju',
-      text: 'Thank you Priya! Real-time messaging, file sharing, and dark/light modes are all active.',
-      attachment: null,
-      replyToId: 'msg_init_1',
-      reactions: { '🔥': ['usr_priya'] },
-      isEdited: false,
-      isDeleted: false,
-      status: 'read',
-      timestamp: Date.now() - 1000 * 60 * 15,
-      deliveredTo: ['usr_priya'],
-      readBy: ['usr_priya']
-    },
-    {
-      id: 'msg_init_3',
-      conversationId: 'conv_direct_priya',
-      senderId: 'usr_priya',
-      text: 'Sounds great! I will test the voice calling now 🎧',
-      attachment: null,
-      replyToId: null,
-      reactions: {},
-      isEdited: false,
-      isDeleted: false,
-      status: 'read',
-      timestamp: Date.now() - 1000 * 60 * 5,
-      deliveredTo: ['usr_anju'],
-      readBy: ['usr_anju']
-    },
-    {
-      id: 'msg_init_4',
-      conversationId: 'conv_direct_alex',
-      senderId: 'usr_alex',
-      text: 'Hey! Are you ready for our 1-on-1 video call?',
-      attachment: null,
-      replyToId: null,
-      reactions: {},
-      isEdited: false,
-      isDeleted: false,
-      status: 'read',
-      timestamp: Date.now() - 1000 * 60 * 35,
-      deliveredTo: ['usr_anju'],
-      readBy: ['usr_anju']
-    },
-    {
-      id: 'msg_init_5',
-      conversationId: 'conv_grp_core_team',
-      senderId: 'usr_priya',
-      text: 'Strict 5-member limit is fully enforced!',
-      attachment: null,
-      replyToId: null,
-      reactions: { '👍': ['usr_anju', 'usr_alex'] },
-      isEdited: false,
-      isDeleted: false,
-      status: 'read',
-      timestamp: Date.now() - 1000 * 60 * 12,
-      deliveredTo: ['usr_anju', 'usr_alex'],
-      readBy: ['usr_anju', 'usr_alex']
-    }
-  ],
+  messages: [],
   chatRequests: [],
   callLogs: [],
   sessions: {} // token -> { userId, expiresAt }
@@ -485,7 +328,7 @@ class JSONDatabase {
     return this.data.messages.find(m => m.id === messageId) || null;
   }
 
-  createMessage({ conversationId, senderId, text, attachment, replyToId }) {
+  createMessage({ conversationId, senderId, text, attachment, replyToId, isViewOnce, isGif }) {
     const conv = this.getConversationById(conversationId);
     if (!conv) throw new Error('Conversation not found');
 
@@ -496,6 +339,11 @@ class JSONDatabase {
       text: (text || '').trim(),
       attachment: attachment || null,
       replyToId: replyToId || null,
+      isViewOnce: Boolean(isViewOnce),
+      isOpened: false,
+      openedAt: null,
+      openedBy: [],
+      isGif: Boolean(isGif),
       reactions: {},
       isEdited: false,
       isDeleted: false,
@@ -508,7 +356,15 @@ class JSONDatabase {
     this.data.messages.push(newMsg);
 
     // Update conversation metadata
-    conv.lastMessagePreview = newMsg.text || (attachment ? `📎 ${attachment.name || 'Attachment'}` : 'New message');
+    let preview = newMsg.text;
+    if (newMsg.isViewOnce) {
+      preview = '① Photo (View Once)';
+    } else if (newMsg.isGif) {
+      preview = '👾 GIF';
+    } else if (attachment) {
+      preview = `📎 ${attachment.name || 'Attachment'}`;
+    }
+    conv.lastMessagePreview = preview || 'New message';
     conv.lastMessageTime = newMsg.timestamp;
 
     if (!conv.unreadCounts) conv.unreadCounts = {};
@@ -520,6 +376,19 @@ class JSONDatabase {
 
     this.save();
     return newMsg;
+  }
+
+  markViewOnceOpened(messageId, userId) {
+    const msg = this.getMessageById(messageId);
+    if (!msg) return null;
+    if (msg.isViewOnce) {
+      msg.isOpened = true;
+      msg.openedAt = Date.now();
+      if (!msg.openedBy) msg.openedBy = [];
+      if (!msg.openedBy.includes(userId)) msg.openedBy.push(userId);
+      this.save();
+    }
+    return msg;
   }
 
   editMessage(messageId, userId, newText) {

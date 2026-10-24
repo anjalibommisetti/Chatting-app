@@ -6,13 +6,11 @@
 import React from 'react';
 import { 
   MessageSquare, 
-  Users, 
   Phone, 
-  UserCheck, 
   Settings, 
   LogOut, 
   ShieldCheck, 
-  Plus, 
+  Lock, 
   Sun,
   Moon
 } from 'lucide-react';
@@ -28,10 +26,8 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
   };
 
   const navItems = [
-    { id: 'chats', label: 'Chats', icon: MessageSquare, badge: 0 },
-    { id: 'groups', label: 'Groups', icon: Users, badge: 0 },
-    { id: 'calls', label: 'Calls', icon: Phone, badge: 0 },
-    { id: 'contacts', label: 'Contacts', icon: UserCheck, badge: 0 },
+    { id: 'chats', label: 'Duo Chat', icon: MessageSquare, badge: 0 },
+    { id: 'calls', label: 'Call Logs', icon: Phone, badge: 0 },
     { id: 'settings', label: 'Settings', icon: Settings, badge: 0 }
   ];
 
@@ -46,9 +42,9 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
           <div className="hidden lg:flex flex-col">
             <span className="font-heading font-extrabold text-lg text-[var(--text-primary)] tracking-tight flex items-center gap-1.5">
               VibeConnect
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500 animate-pulse"></span>
             </span>
-            <span className="text-[11px] text-purple-400 font-medium">Private 1-to-5 Messenger</span>
+            <span className="text-[11px] text-purple-400 font-medium">2-Member Duo Vault</span>
           </div>
         </div>
 
@@ -62,15 +58,15 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
         </button>
       </div>
 
-      {/* Quick Action Button: Create Group */}
+      {/* Quick Action Button: Lock Private Vault */}
       <div className="p-3 lg:p-4">
         <button
-          onClick={onOpenCreateGroup}
-          className="w-full py-2.5 px-3 lg:px-4 rounded-xl bg-vibe-gradient hover:opacity-95 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-purple-600/25 active:scale-95 group cursor-pointer"
-          title="Create New Private Group (Max 5)"
+          onClick={() => store.lockVault()}
+          className="w-full py-2.5 px-3 lg:px-4 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 hover:text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
+          title="Lock Private Vault (Esc)"
         >
-          <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
-          <span className="hidden lg:inline text-xs font-semibold">New Group (Max 5)</span>
+          <Lock className="w-4 h-4 text-purple-400" />
+          <span className="hidden lg:inline text-xs font-semibold">Lock Vault (Esc)</span>
         </button>
       </div>
 
@@ -107,11 +103,11 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
       {/* Privacy Badge */}
       <div className="hidden lg:block mx-4 my-2 p-3 rounded-xl bg-white/[0.02] border border-[var(--border-color)] text-[11px] text-[var(--text-secondary)]">
         <div className="flex items-center gap-1.5 text-purple-400 font-semibold mb-1">
-          <ShieldCheck className="w-4 h-4" />
-          <span>Strict Privacy</span>
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span>Private Key Protected</span>
         </div>
-        <p className="opacity-80 leading-relaxed">
-          Groups strictly capped at 5 members. Real-time direct WebSocket & WebRTC calling.
+        <p className="opacity-80 leading-relaxed text-[10px]">
+          Dedicated 2-member space with real-time online presence and vanishing view-once media.
         </p>
       </div>
 

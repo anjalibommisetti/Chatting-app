@@ -8,7 +8,7 @@ import { realtime } from './socket';
 import { sound } from './audio';
 import { notifications } from './notifications';
 
-// Fallback seed accounts for local offline testing
+// Fallback seed accounts for 2-Member Duo Messenger
 const SEED_USERS = [
   {
     id: 'usr_anju',
@@ -18,51 +18,31 @@ const SEED_USERS = [
     username: 'anju',
     nickname: 'Anju',
     avatar: '🦊',
-    bio: 'Building the next-gen private messenger ✨',
+    bio: 'Private Duo Messenger ✨',
     status: 'online',
     lastSeen: 'Active now'
   },
   {
-    id: 'usr_priya',
-    name: 'Priya Sharma',
-    email: 'priya@vibeconnect.io',
+    id: 'usr_partner',
+    name: 'Partner (Member 2)',
+    email: 'partner@vibeconnect.io',
     phone: '9876543211',
-    username: 'priya',
-    nickname: 'Priya',
+    username: 'partner',
+    nickname: 'Partner',
     avatar: '🌸',
-    bio: 'Coffee & Code ☕',
+    bio: 'Always connected in our private space 💫',
     status: 'online',
     lastSeen: 'Active now'
-  },
-  {
-    id: 'usr_alex',
-    name: 'Alex Rivera',
-    email: 'alex@vibeconnect.io',
-    phone: '9876543212',
-    username: 'alex',
-    nickname: 'Alex',
-    avatar: '⚡',
-    bio: 'Available for video & voice calls 🎧',
-    status: 'online',
-    lastSeen: 'Active now'
-  },
-  {
-    id: 'usr_sam',
-    name: 'Sammy Taylor',
-    email: 'sammy@vibeconnect.io',
-    phone: '9876543213',
-    username: 'sammy',
-    nickname: 'Sammy',
-    avatar: '🚀',
-    bio: 'Exploring tech and decentralized protocols!',
-    status: 'away',
-    lastSeen: '15m ago'
   }
 ];
 
 class StoreService {
   constructor() {
     this.listeners = new Set();
+
+    // Duo Private Key Vault State (Always starts locked on refresh/login for privacy)
+    this.privateKey = this.loadStorage('vibe_duo_private_key', null);
+    this.isVaultUnlocked = false;
 
     // In-memory state with local storage cache for instant hydration
     this.currentUser = this.loadStorage('vibe_current_user', null);
@@ -248,6 +228,59 @@ class StoreService {
         this.notify();
       }
     });
+
+    // 9. View-Once Photo opened event
+    realtime.on('view-once-opened', ({ messageId, conversationId, openedBy, openedAt }) => {
+      const msg = this.messages.find(m => m.id === messageId);
+      if (msg) {
+        msg.isOpened = true;
+        msg.openedAt = openedAt || Date.now();
+        if (!msg.openedBy) msg.openedBy = [];
+        if (!msg.openedBy.includes(openedBy)) msg.openedBy.push(openedBy);
+        this.notify();
+      }
+    });
+  }
+
+  // ============================================================================
+  // DUO PRIVATE KEY VAULT METHODS
+  // ============================================================================
+
+  hasPrivateKey() {
+    return Boolean(this.privateKey);
+  }
+
+  setPrivateKey(newKey) {
+    if (!newKey) return false;
+    this.privateKey = String(newKey).trim();
+    this.saveStorage('vibe_duo_private_key', this.privateKey);
+    this.isVaultUnlocked = true;
+    this.notify();
+    return true;
+  }
+
+  unlockVault(enteredKey) {
+    if (!this.privateKey) {
+      return this.setPrivateKey(enteredKey);
+    }
+    if (String(enteredKey).trim() === String(this.privateKey).trim()) {
+      this.isVaultUnlocked = true;
+      this.notify();
+      return true;
+    }
+    return false;
+  }
+
+  lockVault() {
+    this.isVaultUnlocked = false;
+    this.notify();
+  }
+
+  changePrivateKey(oldKey, newKey) {
+    if (this.privateKey && String(oldKey).trim() !== String(this.privateKey).trim()) {
+      return false;
+    }
+    return this.setPrivateKey(newKey);
   }
 
   // ============================================================================
@@ -530,7 +563,7 @@ class StoreService {
     }
   }
 
-  async sendMessage({ conversationId, text, attachment, replyToId }) {
+  async sendMessage({ conversationId, text, attachment, replyToId, isViewOnce, isGif }) {
     if (!this.currentUser) return null;
     const cleanText = (text || '').trim();
     if (!cleanText && !attachment) return null;
@@ -544,6 +577,11 @@ class StoreService {
       text: cleanText,
       attachment: attachment || null,
       replyToId: replyToId || null,
+      isViewOnce: Boolean(isViewOnce),
+      isOpened: false,
+      openedAt: null,
+      openedBy: [],
+      isGif: Boolean(isGif),
       reactions: {},
       isEdited: false,
       isDeleted: false,
@@ -555,7 +593,15 @@ class StoreService {
 
     const conv = this.conversations.find(c => c.id === conversationId);
     if (conv) {
-      conv.lastMessagePreview = cleanText || (attachment ? `📎 ${attachment.name || 'Attachment'}` : 'New message');
+      let preview = cleanText;
+      if (optimisticMsg.isViewOnce) {
+        preview = '① Photo (View Once)';
+      } else if (optimisticMsg.isGif) {
+        preview = '👾 GIF';
+      } else if (attachment) {
+        preview = `📎 ${attachment.name || 'Attachment'}`;
+      }
+      conv.lastMessagePreview = preview || 'New message';
       conv.lastMessageTime = Date.now();
       this.conversations = [conv, ...this.conversations.filter(c => c.id !== conversationId)];
     }
@@ -569,7 +615,9 @@ class StoreService {
       const res = await api.sendMessage(conversationId, {
         text: cleanText,
         attachment,
-        replyToId
+        replyToId,
+        isViewOnce,
+        isGif
       });
 
       // Replace temp message with server message
@@ -588,6 +636,27 @@ class StoreService {
         this.notify();
       }
     }
+  }
+
+  async markViewOnceOpened(messageId) {
+    const msg = this.messages.find(m => m.id === messageId);
+    if (!msg) return;
+    msg.isOpened = true;
+    msg.openedAt = Date.now();
+    if (!msg.openedBy) msg.openedBy = [];
+    if (this.currentUser && !msg.openedBy.includes(this.currentUser.id)) {
+      msg.openedBy.push(this.currentUser.id);
+    }
+    this.notify();
+
+    try {
+      await api.openViewOnce(messageId);
+    } catch (e) {}
+
+    realtime.emit('view-once-opened', {
+      messageId,
+      conversationId: msg.conversationId
+    });
   }
 
   async editMessage(messageId, newText) {

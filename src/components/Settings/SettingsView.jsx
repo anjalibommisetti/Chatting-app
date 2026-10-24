@@ -44,6 +44,11 @@ export default function SettingsView() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [oldKeyInput, setOldKeyInput] = useState('');
+  const [newKeyInput, setNewKeyInput] = useState('');
+  const [confirmKeyInput, setConfirmKeyInput] = useState('');
+  const [keyError, setKeyError] = useState('');
   const restoreFileRef = useRef(null);
 
   const blockedUsers = (currentUser?.blockedUserIds || []).map(id => store.getUserById(id)).filter(Boolean);
@@ -52,6 +57,29 @@ export default function SettingsView() {
     setFeedbackMessage(msg);
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 2500);
+  };
+
+  const handleChangeKey = (e) => {
+    if (e) e.preventDefault();
+    if (!newKeyInput.trim() || newKeyInput.trim().length < 4) {
+      setKeyError('New key must be at least 4 digits/characters');
+      return;
+    }
+    if (newKeyInput.trim() !== confirmKeyInput.trim()) {
+      setKeyError('New keys do not match');
+      return;
+    }
+    const success = store.changePrivateKey(oldKeyInput.trim(), newKeyInput.trim());
+    if (success) {
+      setShowKeyModal(false);
+      setOldKeyInput('');
+      setNewKeyInput('');
+      setConfirmKeyInput('');
+      setKeyError('');
+      showToast('Private Key updated successfully! 🔐');
+    } else {
+      setKeyError('Current Private Key is incorrect');
+    }
   };
 
   const handleThemeChange = (newTheme) => {
@@ -153,6 +181,42 @@ export default function SettingsView() {
             <span>{feedbackMessage}</span>
           </div>
         )}
+
+        {/* 0. Duo Private Key & Vault Security */}
+        <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-purple-500/30 shadow-xl space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 text-[var(--text-primary)] font-heading font-bold text-base">
+              <Lock className="w-5 h-5 text-purple-400" />
+              <span>Duo Private Key & Security</span>
+            </div>
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">
+              Protected
+            </span>
+          </div>
+
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            Your 2-member chats, photos, calls, and files are hidden behind your secret Private Key. Without this key, nothing is exposed when opening the app.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              onClick={() => setShowKeyModal(true)}
+              className="py-2.5 px-4 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 hover:text-white font-semibold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Lock className="w-4 h-4 text-purple-400" />
+              <span>Change Private Key</span>
+            </button>
+
+            <button
+              onClick={() => store.lockVault()}
+              className="py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-[var(--text-primary)] border border-white/10 font-semibold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <span>Lock Vault Now (Esc)</span>
+            </button>
+          </div>
+        </div>
 
         {/* 1. Appearance & Theme */}
         <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-xl space-y-4">
@@ -504,6 +568,96 @@ export default function SettingsView() {
                   Yes, Reset
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Change Private Key Modal */}
+        {showKeyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="w-full max-w-sm bg-[#101422] border border-purple-500/30 rounded-3xl p-6 shadow-2xl space-y-4 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-purple-400" />
+                  <h3 className="font-heading font-extrabold text-lg text-white">Change Private Key</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowKeyModal(false);
+                    setKeyError('');
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleChangeKey} className="space-y-3">
+                {store.hasPrivateKey() && (
+                  <div>
+                    <label className="text-xs font-semibold text-purple-300 block mb-1">
+                      Current Private Key
+                    </label>
+                    <input
+                      type="password"
+                      value={oldKeyInput}
+                      onChange={(e) => setOldKeyInput(e.target.value)}
+                      placeholder="Enter current key"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-semibold text-purple-300 block mb-1">
+                    New Private Key (PIN or Passphrase)
+                  </label>
+                  <input
+                    type="password"
+                    value={newKeyInput}
+                    onChange={(e) => setNewKeyInput(e.target.value)}
+                    placeholder="At least 4 characters"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-purple-300 block mb-1">
+                    Confirm New Private Key
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmKeyInput}
+                    onChange={(e) => setConfirmKeyInput(e.target.value)}
+                    placeholder="Repeat new key"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                {keyError && (
+                  <p className="text-xs text-rose-400 font-semibold">{keyError}</p>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowKeyModal(false);
+                      setKeyError('');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-vibe-gradient hover:opacity-95 text-xs font-semibold text-white cursor-pointer shadow-md shadow-purple-600/30"
+                  >
+                    Save New Key
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

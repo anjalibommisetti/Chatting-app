@@ -153,10 +153,16 @@ class ApiClient {
     return this.request(`/conversations/${conversationId}/messages?limit=${limit}`);
   }
 
-  async sendMessage(conversationId, { text, attachment, replyToId }) {
+  async sendMessage(conversationId, { text, attachment, replyToId, isViewOnce, isGif }) {
     return this.request(`/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ text, attachment, replyToId })
+      body: JSON.stringify({ text, attachment, replyToId, isViewOnce, isGif })
+    });
+  }
+
+  async openViewOnce(messageId) {
+    return this.request(`/messages/${messageId}/view-once-open`, {
+      method: 'POST'
     });
   }
 

@@ -11,6 +11,9 @@ import { calling } from './services/webrtc';
 import Sidebar from './components/Navigation/Sidebar';
 import BottomNav from './components/Navigation/BottomNav';
 
+// Private Key Vault Gatekeeper
+import PrivateVaultLock from './components/Vault/PrivateVaultLock';
+
 // Auth
 import WelcomeScreen from './components/Auth/WelcomeScreen';
 import LoginModal from './components/Auth/LoginModal';
@@ -112,6 +115,24 @@ export default function App() {
             setShowLogin(true);
           }}
         />
+      </div>
+    );
+  }
+
+  // If user is logged in but Vault is locked, render PrivateVaultLock screen!
+  // No chats, call logs, or media will be rendered until unlocked with Private Key.
+  if (!store.isVaultUnlocked) {
+    return (
+      <div className="w-full h-screen bg-[#07090F] overflow-hidden">
+        <PrivateVaultLock
+          onUnlocked={() => {
+            setTick(t => t + 1);
+            if (!activeConversationId && store.conversations.length > 0) {
+              setActiveConversationId(store.conversations[0].id);
+            }
+          }}
+        />
+        <CallModal />
       </div>
     );
   }

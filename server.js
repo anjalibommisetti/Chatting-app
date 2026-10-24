@@ -384,7 +384,7 @@ app.post('/api/conversations/:id/read', authenticate, (req, res) => {
 
 // POST /api/conversations/:id/messages
 app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
-  const { text, attachment, replyToId, replyTo } = req.body;
+  const { text, attachment, replyToId, replyTo, isViewOnce, isGif } = req.body;
   const conv = db.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ success: false, error: 'Conversation not found' });
 
@@ -398,7 +398,9 @@ app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
     senderId: req.user.id,
     text,
     attachment,
-    replyToId: effectiveReplyTo
+    replyToId: effectiveReplyTo,
+    isViewOnce,
+    isGif
   });
 
   // Broadcast to socket room
@@ -424,6 +426,19 @@ app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
     replyToId: newMsg.replyToId,
     ...newMsg
   });
+});
+
+// POST /api/messages/:id/view-once-open
+app.post('/api/messages/:id/view-once-open', authenticate, (req, res) => {
+  const updated = db.markViewOnceOpened(req.params.id, req.user.id);
+  if (!updated) return res.status(404).json({ success: false, error: 'Message not found' });
+  io.to('conv_' + updated.conversationId).emit('view-once-opened', {
+    messageId: updated.id,
+    conversationId: updated.conversationId,
+    openedBy: req.user.id,
+    openedAt: updated.openedAt
+  });
+  return res.json({ success: true, message: updated });
 });
 
 // Helper for editing messages
@@ -715,7 +730,9 @@ io.on('connection', (socket) => {
         senderId: user.id,
         text: data.text,
         attachment: data.attachment,
-        replyToId: data.replyToId
+        replyToId: data.replyToId,
+        isViewOnce: data.isViewOnce,
+        isGif: data.isGif
       });
 
       socket.to('conv_' + data.conversationId).emit('receive-message', newMsg);
@@ -724,6 +741,19 @@ io.on('connection', (socket) => {
       socket.emit('message-sent', newMsg);
     } catch (err) {
       if (callback) callback({ success: false, error: err.message });
+    }
+  });
+
+  socket.on('view-once-opened', ({ messageId, conversationId }) => {
+    if (!messageId || !user) return;
+    const updated = db.markViewOnceOpened(messageId, user.id);
+    if (updated) {
+      io.to('conv_' + conversationId).emit('view-once-opened', {
+        messageId,
+        conversationId,
+        openedBy: user.id,
+        openedAt: updated.openedAt
+      });
     }
   });
 

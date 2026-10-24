@@ -10,7 +10,7 @@
       "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
       "salt": "e5b7218ac93f412d8a546b81d6d3765e",
       "avatar": "🦊",
-      "bio": "Building the next-gen private messenger ✨",
+      "bio": "Private Duo Messenger ✨",
       "status": "online",
       "lastSeen": "Active now",
       "blockedUserIds": [],
@@ -22,16 +22,16 @@
       "createdAt": 1791862594837
     },
     {
-      "id": "usr_priya",
-      "name": "Priya Sharma",
-      "email": "priya@vibeconnect.io",
+      "id": "usr_partner",
+      "name": "Partner (Member 2)",
+      "email": "partner@vibeconnect.io",
       "phone": "9876543211",
-      "username": "priya",
-      "nickname": "Priya",
+      "username": "partner",
+      "nickname": "Partner",
       "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
       "salt": "e5b7218ac93f412d8a546b81d6d3765e",
       "avatar": "🌸",
-      "bio": "Coffee & Code ☕",
+      "bio": "Always connected in our private space 💫",
       "status": "online",
       "lastSeen": "Active now",
       "blockedUserIds": [],
@@ -41,202 +41,16 @@
         "soundAlerts": true
       },
       "createdAt": 1791948994837
-    },
-    {
-      "id": "usr_alex",
-      "name": "Alex Rivera",
-      "email": "alex@vibeconnect.io",
-      "phone": "9876543212",
-      "username": "alex",
-      "nickname": "Alex",
-      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
-      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
-      "avatar": "⚡",
-      "bio": "Available for video & voice calls 🎧",
-      "status": "online",
-      "lastSeen": "Active now",
-      "blockedUserIds": [],
-      "settings": {
-        "theme": "dark",
-        "readReceipts": true,
-        "soundAlerts": true
-      },
-      "createdAt": 1792035394837
-    },
-    {
-      "id": "usr_sam",
-      "name": "Sammy Taylor",
-      "email": "sammy@vibeconnect.io",
-      "phone": "9876543213",
-      "username": "sammy",
-      "nickname": "Sammy",
-      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
-      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
-      "avatar": "🚀",
-      "bio": "Exploring tech and decentralized protocols!",
-      "status": "away",
-      "lastSeen": "15m ago",
-      "blockedUserIds": [],
-      "settings": {
-        "theme": "dark",
-        "readReceipts": true,
-        "soundAlerts": true
-      },
-      "createdAt": 1792107394837
-    },
-    {
-      "id": "usr_1792122842708_2hg5a",
-      "name": "Test Runner Updated",
-      "email": "tester_2413@example.com",
-      "phone": "9905730703",
-      "username": "tester_2413",
-      "nickname": "Test",
-      "passwordHash": "8c966cdf7750ab2319ef1605d08c3a5b0982a858b856c9fffdae3eceae010e7dd82df2860819bb0bb3428e4ddfc7a827d11112fb75b8e2fbea9045478def6e0a",
-      "salt": "3faa7b149b3d52f7104a3db41110d13e",
-      "avatar": "🦊",
-      "bio": "Senior Architect",
-      "status": "Coding away",
-      "lastSeen": "Active now",
-      "blockedUserIds": [],
-      "settings": {
-        "theme": "dark",
-        "readReceipts": true,
-        "soundAlerts": true
-      },
-      "createdAt": 1792122842710,
-      "resetCode": "785002",
-      "resetCodeExpires": 1792123743460
-    },
-    {
-      "id": "usr_1792123207909_dsx6o",
-      "name": "Test Runner Updated",
-      "email": "tester_7611@example.com",
-      "phone": "900007611",
-      "username": "tester_7611",
-      "nickname": "Test",
-      "passwordHash": "8787dbbac1b649c40b8c68720a78950c1d279b3f69be64a39782f478dfc07a18b0a0be51f7db7e74afa9801f70a85cee542f19e47e6a7d70f6e90744a699cd4f",
-      "salt": "14ffe947362dd29bf5fdaa94adb0bda7",
-      "avatar": "🦊",
-      "bio": "Senior Architect",
-      "status": "Coding away",
-      "lastSeen": "Active now",
-      "blockedUserIds": [],
-      "settings": {
-        "theme": "dark",
-        "readReceipts": true,
-        "soundAlerts": true
-      },
-      "createdAt": 1792123207909,
-      "resetCode": null,
-      "resetCodeExpires": null
     }
   ],
-  "groups": [
-    {
-      "id": "grp_core_team",
-      "name": "Core Dev Circle",
-      "avatar": "⚡",
-      "creatorId": "usr_anju",
-      "inviteCode": "VIBE-DEV1",
-      "maxMembers": 5,
-      "members": [
-        "usr_anju",
-        "usr_priya",
-        "usr_alex"
-      ],
-      "createdAt": 1792035394837
-    },
-    {
-      "id": "grp_1792122843391_1lbts",
-      "name": "Design Architects",
-      "avatar": "✨",
-      "creatorId": "usr_1792122842708_2hg5a",
-      "inviteCode": "VIBE-C8F3BF",
-      "maxMembers": 5,
-      "members": [
-        "usr_1792122842708_2hg5a",
-        "usr_priya"
-      ],
-      "createdAt": 1792122843391
-    },
-    {
-      "id": "grp_1792123208469_29ynj",
-      "name": "Design Architects",
-      "avatar": "✨",
-      "creatorId": "usr_1792123207909_dsx6o",
-      "inviteCode": "VIBE-6E1BF2",
-      "maxMembers": 5,
-      "members": [
-        "usr_1792123207909_dsx6o",
-        "usr_priya"
-      ],
-      "createdAt": 1792123208469
-    }
-  ],
+  "groups": [],
   "conversations": [
     {
-      "id": "conv_grp_1792123208469_29ynj",
-      "type": "group",
-      "participantIds": [
-        "usr_1792123207909_dsx6o",
-        "usr_priya"
-      ],
-      "groupId": "grp_1792123208469_29ynj",
-      "isPinned": false,
-      "isMuted": false,
-      "isArchived": false,
-      "unreadCounts": {
-        "usr_1792123207909_dsx6o": 0,
-        "usr_priya": 0
-      },
-      "lastMessagePreview": "Group created by Test",
-      "lastMessageTime": 1792123208469,
-      "createdAt": 1792123208469
-    },
-    {
-      "id": "conv_1792123208385_t8kr57",
-      "type": "direct",
-      "participantIds": [
-        "usr_1792123207909_dsx6o",
-        "usr_priya"
-      ],
-      "groupId": null,
-      "isPinned": false,
-      "isMuted": false,
-      "isArchived": false,
-      "unreadCounts": {
-        "usr_1792123207909_dsx6o": 0,
-        "usr_priya": 1
-      },
-      "lastMessagePreview": "Hi! Received loud and clear.",
-      "lastMessageTime": 1792123208415,
-      "createdAt": 1792123208385
-    },
-    {
-      "id": "conv_grp_1792122843391_1lbts",
-      "type": "group",
-      "participantIds": [
-        "usr_1792122842708_2hg5a",
-        "usr_priya"
-      ],
-      "groupId": "grp_1792122843391_1lbts",
-      "isPinned": false,
-      "isMuted": false,
-      "isArchived": false,
-      "unreadCounts": {
-        "usr_1792122842708_2hg5a": 0,
-        "usr_priya": 0
-      },
-      "lastMessagePreview": "Group created by Test",
-      "lastMessageTime": 1792122843391,
-      "createdAt": 1792122843391
-    },
-    {
-      "id": "conv_direct_priya",
+      "id": "conv_duo_main",
       "type": "direct",
       "participantIds": [
         "usr_anju",
-        "usr_priya"
+        "usr_partner"
       ],
       "groupId": null,
       "isPinned": true,
@@ -244,250 +58,20 @@
       "isArchived": false,
       "unreadCounts": {
         "usr_anju": 0,
-        "usr_priya": 0
+        "usr_partner": 0
       },
-      "lastMessagePreview": "Sounds great! I will test the voice calling now 🎧",
-      "lastMessageTime": 1792121494837,
-      "createdAt": 1791948994837
-    },
-    {
-      "id": "conv_direct_alex",
-      "type": "direct",
-      "participantIds": [
-        "usr_anju",
-        "usr_alex"
-      ],
-      "groupId": null,
-      "isPinned": false,
-      "isMuted": false,
-      "isArchived": false,
-      "unreadCounts": {
-        "usr_anju": 0,
-        "usr_alex": 0
-      },
-      "lastMessagePreview": "Hey! Are you ready for our 1-on-1 video call?",
-      "lastMessageTime": 1792119694837,
-      "createdAt": 1792035394837
-    },
-    {
-      "id": "conv_grp_core_team",
-      "type": "group",
-      "participantIds": [
-        "usr_anju",
-        "usr_priya",
-        "usr_alex"
-      ],
-      "groupId": "grp_core_team",
-      "isPinned": false,
-      "isMuted": false,
-      "isArchived": false,
-      "unreadCounts": {
-        "usr_anju": 0,
-        "usr_priya": 0,
-        "usr_alex": 0
-      },
-      "lastMessagePreview": "Priya: Strict 5-member limit is fully enforced!",
-      "lastMessageTime": 1792121074837,
-      "createdAt": 1792035394837
+      "lastMessagePreview": "🔒 Duo Private Vault Active",
+      "lastMessageTime": 1792120000000,
+      "createdAt": 1791862594837
     }
   ],
-  "messages": [
-    {
-      "id": "msg_init_1",
-      "conversationId": "conv_direct_priya",
-      "senderId": "usr_priya",
-      "text": "Hey Anju! The new UI redesign looks incredibly smooth. Love the WhatsApp & Telegram vibes! 🚀",
-      "attachment": null,
-      "replyToId": null,
-      "reactions": {
-        "❤️": [
-          "usr_anju"
-        ]
-      },
-      "isEdited": false,
-      "isDeleted": false,
-      "status": "read",
-      "timestamp": 1792120294837,
-      "deliveredTo": [
-        "usr_anju"
-      ],
-      "readBy": [
-        "usr_anju"
-      ]
-    },
-    {
-      "id": "msg_init_2",
-      "conversationId": "conv_direct_priya",
-      "senderId": "usr_anju",
-      "text": "Thank you Priya! Real-time messaging, file sharing, and dark/light modes are all active.",
-      "attachment": null,
-      "replyToId": "msg_init_1",
-      "reactions": {
-        "🔥": [
-          "usr_priya"
-        ]
-      },
-      "isEdited": false,
-      "isDeleted": false,
-      "status": "read",
-      "timestamp": 1792120894837,
-      "deliveredTo": [
-        "usr_priya"
-      ],
-      "readBy": [
-        "usr_priya"
-      ]
-    },
-    {
-      "id": "msg_init_3",
-      "conversationId": "conv_direct_priya",
-      "senderId": "usr_priya",
-      "text": "Sounds great! I will test the voice calling now 🎧",
-      "attachment": null,
-      "replyToId": null,
-      "reactions": {},
-      "isEdited": false,
-      "isDeleted": false,
-      "status": "read",
-      "timestamp": 1792121494837,
-      "deliveredTo": [
-        "usr_anju"
-      ],
-      "readBy": [
-        "usr_anju"
-      ]
-    },
-    {
-      "id": "msg_init_4",
-      "conversationId": "conv_direct_alex",
-      "senderId": "usr_alex",
-      "text": "Hey! Are you ready for our 1-on-1 video call?",
-      "attachment": null,
-      "replyToId": null,
-      "reactions": {},
-      "isEdited": false,
-      "isDeleted": false,
-      "status": "read",
-      "timestamp": 1792119694837,
-      "deliveredTo": [
-        "usr_anju"
-      ],
-      "readBy": [
-        "usr_anju"
-      ]
-    },
-    {
-      "id": "msg_init_5",
-      "conversationId": "conv_grp_core_team",
-      "senderId": "usr_priya",
-      "text": "Strict 5-member limit is fully enforced!",
-      "attachment": null,
-      "replyToId": null,
-      "reactions": {
-        "👍": [
-          "usr_anju",
-          "usr_alex"
-        ]
-      },
-      "isEdited": false,
-      "isDeleted": false,
-      "status": "read",
-      "timestamp": 1792121074837,
-      "deliveredTo": [
-        "usr_anju",
-        "usr_alex"
-      ],
-      "readBy": [
-        "usr_anju",
-        "usr_alex"
-      ]
-    },
-    {
-      "id": "msg_1792123208399_av58iu",
-      "conversationId": "conv_1792123208385_t8kr57",
-      "senderId": "usr_1792123207909_dsx6o",
-      "text": "This message was deleted",
-      "attachment": null,
-      "replyToId": null,
-      "reactions": {},
-      "isEdited": true,
-      "isDeleted": true,
-      "status": "sent",
-      "timestamp": 1792123208399,
-      "deliveredTo": [
-        "usr_1792123207909_dsx6o"
-      ],
-      "readBy": [
-        "usr_1792123207909_dsx6o"
-      ]
-    },
-    {
-      "id": "msg_1792123208415_wjkv0d",
-      "conversationId": "conv_1792123208385_t8kr57",
-      "senderId": "usr_priya",
-      "text": "Hi! Received loud and clear.",
-      "attachment": null,
-      "replyToId": "msg_1792123208399_av58iu",
-      "reactions": {
-        "❤️": [
-          "usr_1792123207909_dsx6o"
-        ]
-      },
-      "isEdited": false,
-      "isDeleted": false,
-      "status": "read",
-      "timestamp": 1792123208415,
-      "deliveredTo": [
-        "usr_priya"
-      ],
-      "readBy": [
-        "usr_priya",
-        "usr_1792123207909_dsx6o"
-      ]
-    }
-  ],
+  "messages": [],
   "chatRequests": [],
   "callLogs": [],
   "sessions": {
-    "22f4e974ea58f7fb89d0b5c929b848ca40e474f70aeb28e734b148f9120a00d2": {
-      "userId": "usr_1792122842708_2hg5a",
-      "expiresAt": 1794714842714
-    },
-    "5d9b0c0fe932990534e59c581bf163796e36d9680617dfbd538a0d87b866ffee": {
-      "userId": "usr_1792122842708_2hg5a",
-      "expiresAt": 1794714842925
-    },
-    "e1874cb0906f596eab85ecfc00c5536276e144254d83549f8cdcba121b4fbb38": {
-      "userId": "usr_priya",
-      "expiresAt": 1794714843292
-    },
-    "649a791869d07a0928276d13ca636479db6175b7c98c7d48c46b84ebb3626c0a": {
-      "userId": "usr_priya",
-      "expiresAt": 1794714908502
-    },
-    "6f0104940753d7e3978b8c9af49a2594752f5f139a2db157a1ea2d95ad4508bd": {
-      "userId": "usr_priya",
-      "expiresAt": 1794715180896
-    },
-    "1920842f663f3dce702214d1c0802c5c610b431a2b73384690acc9cbb9e53ea3": {
-      "userId": "usr_1792123207909_dsx6o",
-      "expiresAt": 1794715207911
-    },
-    "25a48f9c83409f596419f8ce9d146d39902161ababb14ce7534d736ceb6fe82d": {
-      "userId": "usr_1792123207909_dsx6o",
-      "expiresAt": 1794715208089
-    },
-    "69f0fe985765a0a261e3e9399ee835e1c9430db6b56e47324d56223854c8b1d8": {
-      "userId": "usr_priya",
-      "expiresAt": 1794715208358
-    },
-    "944fdd0c0c5b563c3f41c13118398651d968c4fcc6c347a0313ed783f17d5b03": {
-      "userId": "usr_1792123207909_dsx6o",
-      "expiresAt": 1794715208857
-    },
-    "5a9386a275fc68e0367d1f3168c7d1da0b1f9a77d475a26c1a606f2f5cf07b40": {
-      "userId": "usr_priya",
-      "expiresAt": 1794715228144
+    "b5b843da30159e1c361b4f2d7bd0b769001a5d1e9c5712e722a196fa80f4d9f6": {
+      "userId": "usr_anju",
+      "expiresAt": 1795409784306
     }
   }
 }
