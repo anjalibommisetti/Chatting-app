@@ -113,27 +113,43 @@ function authenticate(req, res, next) {
 app.post('/api/auth/register', (req, res) => {
   try {
     const { name, email, phone, phoneNumber, username, password, avatar, bio } = req.body;
-    
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
+    const rawPhone = (phone || phoneNumber || '').trim();
+    const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+
+    if (!name || (!email && !cleanPhone) || !password) {
+      return res.status(400).json({ success: false, error: 'Name, phone number or email, and password are required.' });
     }
     if (password.length < 6) {
       return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
     }
 
-    const existing = db.data.users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (existing) {
+    const effectiveEmail = (email && email.trim()) ? email.trim().toLowerCase() : (cleanPhone ? `${cleanPhone}@vibechat.io` : '');
+
+    const existingEmail = db.data.users.find(u => u.email.toLowerCase() === effectiveEmail);
+    if (existingEmail && email) {
       return res.status(409).json({ success: false, error: 'An account with this email address already exists.' });
     }
 
+    if (cleanPhone) {
+      const existingPhone = db.data.users.find(u => {
+        const uPhone = (u.phone || '').replace(/[^0-9]/g, '');
+        return uPhone === cleanPhone;
+      });
+      if (existingPhone) {
+        return res.status(409).json({ success: false, error: 'An account with this phone number already exists.' });
+      }
+    }
+
+    const cleanUsername = username ? username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') : (cleanPhone ? 'user_' + cleanPhone.slice(-4) : name.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''));
+
     const newUser = db.createUser({
-      name,
-      email,
-      phone: phone || phoneNumber,
-      username: username || email.split('@')[0],
+      name: name.trim(),
+      email: effectiveEmail,
+      phone: cleanPhone || '9' + Math.floor(100000000 + Math.random() * 900000000),
+      username: cleanUsername,
       password,
-      avatar,
-      bio
+      avatar: avatar || '🦊',
+      bio: bio || 'Available for Chat & Calls 💬'
     });
 
     const token = db.createSession(newUser.id);
@@ -274,6 +290,28 @@ function handleUserSearch(req, res) {
 // GET /api/users & GET /api/users/search
 app.get('/api/users', authenticate, handleUserSearch);
 app.get('/api/users/search', authenticate, handleUserSearch);
+
+// GET /api/users/by-phone/:phone — PhonePe-style Instant Contact Lookup
+app.get('/api/users/by-phone/:phone', (req, res) => {
+  const cleanPhone = (req.params.phone || '').replace(/[^0-9]/g, '');
+  if (!cleanPhone || cleanPhone.length < 5) {
+    return res.status(400).json({ success: false, error: 'Enter a valid phone number' });
+  }
+
+  const user = db.data.users.find(u => {
+    const uPhone = (u.phone || '').replace(/[^0-9]/g, '');
+    return uPhone && (uPhone === cleanPhone || uPhone.endsWith(cleanPhone) || cleanPhone.endsWith(uPhone));
+  });
+
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'No user registered with this phone number' });
+  }
+
+  return res.json({
+    success: true,
+    user: db.sanitizeUser(user)
+  });
+});
 
 // PUT /api/users/profile
 app.put('/api/users/profile', authenticate, (req, res) => {

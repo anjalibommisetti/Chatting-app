@@ -40,9 +40,9 @@ class StoreService {
   constructor() {
     this.listeners = new Set();
 
-    // Duo Private Key Vault State (Always starts locked on refresh/login for privacy)
-    this.privateKey = this.loadStorage('vibe_duo_private_key', null);
-    this.isVaultUnlocked = false;
+    // Private Key Vault State (Unlocked by default for clean and immediate chat access)
+    this.privateKey = this.loadStorage('vibe_duo_private_key', 'unlocked');
+    this.isVaultUnlocked = true;
 
     // In-memory state with local storage cache for instant hydration
     this.currentUser = this.loadStorage('vibe_current_user', null);
@@ -327,26 +327,105 @@ class StoreService {
     }
   }
 
-  async signUp({ name, email, phone, username, password, avatar, bio }) {
-    const res = await api.register({
-      name,
-      email,
-      phone,
-      username,
-      password,
-      avatar,
-      bio
-    });
+  // PhonePe-style Instant Phone Number Lookup
+  findUserByPhone(phoneQuery) {
+    if (!phoneQuery) return null;
+    const clean = phoneQuery.replace(/[^0-9]/g, '');
+    if (!clean) return null;
 
-    this.currentUser = res.user;
-    if (res.token) {
-      realtime.updateAuthToken(res.token);
+    const allUsers = [...(this.users || []), ...SEED_USERS];
+    return allUsers.find(u => {
+      const p = (u.phone || '').replace(/[^0-9]/g, '');
+      return p && (p === clean || p.endsWith(clean) || clean.endsWith(p));
+    }) || null;
+  }
+
+  async searchUserByPhoneOnline(phoneQuery) {
+    if (!phoneQuery) return null;
+    const clean = phoneQuery.replace(/[^0-9]/g, '');
+    if (clean.length < 5) return null;
+
+    // Check local store first
+    const local = this.findUserByPhone(clean);
+    if (local) return local;
+
+    try {
+      const res = await api.getUserByPhone(clean);
+      if (res && res.user) {
+        if (!this.users.some(u => u.id === res.user.id)) {
+          this.users.push(res.user);
+          this.saveStorage('vibe_users', this.users);
+        }
+        return res.user;
+      }
+    } catch (e) {
+      try {
+        const res = await api.searchUsers(clean);
+        const usersList = res.users || (Array.isArray(res) ? res : []);
+        if (usersList.length > 0) {
+          return usersList[0];
+        }
+      } catch (err) {}
     }
+    return null;
+  }
 
-    // Refresh data
-    await this.loadBackendData();
-    this.notify();
-    return res.user;
+  async signUp({ name, email, phone, username, password, avatar, bio }) {
+    try {
+      const res = await api.register({
+        name,
+        email,
+        phone,
+        username,
+        password,
+        avatar,
+        bio
+      });
+
+      this.currentUser = res.user;
+      this.isVaultUnlocked = true;
+      if (res.token) {
+        realtime.updateAuthToken(res.token);
+      }
+
+      await this.loadBackendData();
+      this.notify();
+      return res.user;
+    } catch (err) {
+      // If server is not reachable, gracefully fallback to local register
+      const isConnectionErr = err.message && (
+        err.message.includes('backend server is running') ||
+        err.message.includes('Failed to fetch') ||
+        err.message.includes('NetworkError') ||
+        err.message.includes('504')
+      );
+
+      if (isConnectionErr) {
+        const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+        const localUser = {
+          id: 'usr_' + Date.now(),
+          name: name.trim(),
+          email: email || `${cleanPhone || 'user'}@vibechat.io`,
+          phone: cleanPhone || '9876543210',
+          username: username || (cleanPhone ? 'user_' + cleanPhone.slice(-4) : name.toLowerCase().replace(/[^a-z0-9_]/g, '')),
+          nickname: name.trim().split(' ')[0],
+          avatar: avatar || '🦊',
+          bio: bio || 'Available for Chat & Calls 💬',
+          status: 'online',
+          lastSeen: 'Active now'
+        };
+        this.currentUser = localUser;
+        if (!this.users.some(u => u.id === localUser.id)) {
+          this.users.push(localUser);
+          this.saveStorage('vibe_users', this.users);
+        }
+        this.saveStorage('vibe_current_user', this.currentUser);
+        this.isVaultUnlocked = true;
+        this.notify();
+        return localUser;
+      }
+      throw err;
+    }
   }
 
   async logIn(identifier, password) {

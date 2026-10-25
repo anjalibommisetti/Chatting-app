@@ -119,25 +119,7 @@ export default function App() {
     );
   }
 
-  // If user is logged in but Vault is locked, render PrivateVaultLock screen!
-  // No chats, call logs, or media will be rendered until unlocked with Private Key.
-  if (!store.isVaultUnlocked) {
-    return (
-      <div className="w-full h-screen bg-[#07090F] overflow-hidden">
-        <PrivateVaultLock
-          onUnlocked={() => {
-            setTick(t => t + 1);
-            if (!activeConversationId && store.conversations.length > 0) {
-              setActiveConversationId(store.conversations[0].id);
-            }
-          }}
-        />
-        <CallModal />
-      </div>
-    );
-  }
-
-  // Active group id for group info modal
+  // User is logged in, show direct messaging and calling interface
   const activeConversation = store.conversations.find(c => c.id === activeConversationId);
   const activeGroupId = activeConversation?.groupId || null;
 
@@ -222,6 +204,7 @@ export default function App() {
           if (tab === 'chats') setActiveConversationId(null);
         }}
         onOpenCreateGroup={() => setShowCreateGroup(true)}
+        onOpenNewChatByPhone={() => setShowNewChatByPhone(true)}
       />
 
       {/* Modals */}
@@ -232,6 +215,7 @@ export default function App() {
           setActiveConversationId(convId);
           setCurrentTab('chats');
         }}
+        onStartCall={(callPayload) => calling.startCall(callPayload)}
       />
 
       <CreateGroupModal

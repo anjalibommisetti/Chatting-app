@@ -26,12 +26,18 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
     e.preventDefault();
     setError('');
 
-    if (!name.trim() || !email.trim() || !password) {
-      setError('Please provide your full name, email, and password.');
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!name.trim() || !password) {
+      setError('Please provide your full name and password.');
       return;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    if (!email.trim() && !cleanPhone) {
+      setError('Please provide either a phone number or email address.');
+      return;
+    }
+
+    if (email.trim() && (!email.includes('@') || !email.includes('.'))) {
       setError('Please enter a valid email address.');
       return;
     }
@@ -41,14 +47,14 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
       return;
     }
 
-    const cleanUsername = username.trim() || email.split('@')[0].replace(/[^a-z0-9_]/gi, '');
+    const cleanUsername = username.trim() || (cleanPhone ? 'user_' + cleanPhone.slice(-4) : name.trim().toLowerCase().replace(/[^a-z0-9_]/gi, ''));
 
     setLoading(true);
     try {
       await store.signUp({
         name: name.trim(),
-        email: email.trim(),
-        phone: phone.replace(/[^0-9]/g, ''),
+        email: email.trim() || (cleanPhone ? `${cleanPhone}@vibechat.io` : ''),
+        phone: cleanPhone,
         username: cleanUsername,
         password,
         avatar

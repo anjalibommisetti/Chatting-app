@@ -26,8 +26,8 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
   };
 
   const navItems = [
-    { id: 'chats', label: 'Duo Chat', icon: MessageSquare, badge: 0 },
-    { id: 'calls', label: 'Call Logs', icon: Phone, badge: 0 },
+    { id: 'chats', label: 'Chats', icon: MessageSquare, badge: 0 },
+    { id: 'calls', label: 'Calls', icon: Phone, badge: 0 },
     { id: 'settings', label: 'Settings', icon: Settings, badge: 0 }
   ];
 
@@ -37,14 +37,14 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
       <div className="h-18 flex items-center justify-between px-4 lg:px-6 border-b border-[var(--border-color)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 font-bold text-xl flex-shrink-0">
-            V
+            💬
           </div>
           <div className="hidden lg:flex flex-col">
             <span className="font-heading font-extrabold text-lg text-[var(--text-primary)] tracking-tight flex items-center gap-1.5">
-              VibeConnect
+              VibeChat
               <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500 animate-pulse"></span>
             </span>
-            <span className="text-[11px] text-purple-400 font-medium">2-Member Duo Vault</span>
+            <span className="text-[11px] text-purple-400 font-medium">Simple Chat & Calls</span>
           </div>
         </div>
 
@@ -55,18 +55,6 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
           title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
           {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-500" />}
-        </button>
-      </div>
-
-      {/* Quick Action Button: Lock Private Vault */}
-      <div className="p-3 lg:p-4">
-        <button
-          onClick={() => store.lockVault()}
-          className="w-full py-2.5 px-3 lg:px-4 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 hover:text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
-          title="Lock Private Vault (Esc)"
-        >
-          <Lock className="w-4 h-4 text-purple-400" />
-          <span className="hidden lg:inline text-xs font-semibold">Lock Vault (Esc)</span>
         </button>
       </div>
 

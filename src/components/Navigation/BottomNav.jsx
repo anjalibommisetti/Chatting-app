@@ -1,15 +1,14 @@
 // ==============================================================================
-// VibeConnect — Mobile Responsive Bottom Navigation Bar
+// VibeChat — Mobile Responsive Bottom Navigation Bar
 // ==============================================================================
 
 import React from 'react';
-import { MessageSquare, Phone, Settings, Lock } from 'lucide-react';
-import { store } from '../../services/store';
+import { MessageSquare, Phone, Settings, Plus } from 'lucide-react';
 
-export default function BottomNav({ currentTab, setTab }) {
+export default function BottomNav({ currentTab, setTab, onOpenNewChatByPhone }) {
   const tabs = [
-    { id: 'chats', label: 'Duo Chat', icon: MessageSquare },
-    { id: 'lock', label: 'Lock', icon: Lock, isAction: true },
+    { id: 'chats', label: 'Chats', icon: MessageSquare },
+    { id: 'new', label: 'New Chat', icon: Plus, isAction: true },
     { id: 'calls', label: 'Calls', icon: Phone },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
@@ -22,11 +21,11 @@ export default function BottomNav({ currentTab, setTab }) {
           return (
             <button
               key={tab.id}
-              onClick={() => store.lockVault()}
-              className="w-12 h-12 rounded-2xl bg-vibe-gradient text-white flex items-center justify-center shadow-lg shadow-purple-600/40 active:scale-95 transition-transform -mt-5 border-2 border-[var(--bg-surface)] cursor-pointer"
-              title="Lock Private Vault"
+              onClick={onOpenNewChatByPhone}
+              className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/40 active:scale-95 transition-transform -mt-5 border-2 border-[var(--bg-surface)] cursor-pointer"
+              title="Find Contact by Mobile Number"
             >
-              <Lock className="w-5 h-5" />
+              <Plus className="w-6 h-6" />
             </button>
           );
         }

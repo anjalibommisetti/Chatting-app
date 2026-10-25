@@ -41,7 +41,22 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      
+      let data;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          if (!response.ok) {
+            throw new Error(`Server returned error (${response.status}). Please make sure the backend server is running.`);
+          }
+          throw new Error('Server returned unexpected non-JSON response.');
+        }
+      }
 
       if (!response.ok || data.success === false) {
         throw new Error(data.error || 'Request failed');
@@ -101,6 +116,11 @@ class ApiClient {
   // --- Users & Profile ---
   async searchUsers(query = '') {
     return this.request(`/users?q=${encodeURIComponent(query)}`);
+  }
+
+  async getUserByPhone(phone) {
+    const clean = (phone || '').replace(/[^0-9]/g, '');
+    return this.request(`/users/by-phone/${clean}`);
   }
 
   async updateProfile(profileData) {
