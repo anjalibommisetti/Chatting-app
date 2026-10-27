@@ -46,6 +46,15 @@ if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(PUBLIC_DIR));
 }
 
+// APK Direct Download Endpoint for QR Code Scanning
+app.get(['/download', '/VibeChat.apk'], (req, res) => {
+  const apkPath = path.join(__dirname, 'VibeChat.apk');
+  if (fs.existsSync(apkPath)) {
+    return res.download(apkPath, 'VibeChat.apk');
+  }
+  return res.status(404).send('APK file not found. Please run npm run build:apk');
+});
+
 // Multer Storage Configuration for File Uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

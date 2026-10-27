@@ -1,0 +1,28 @@
+{
+  "name": "vibeconnect-frontend",
+  "version": "1.0.0",
+  "description": "VibeConnect React 19 Frontend Web Client",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.55.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "socket.io-client": "^4.8.4",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4"
+  }
+}

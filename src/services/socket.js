@@ -4,6 +4,7 @@
 // ==============================================================================
 
 import { io } from 'socket.io-client';
+import { getServerUrl } from './api';
 
 class RealtimeSocket {
   constructor() {
@@ -17,8 +18,9 @@ class RealtimeSocket {
     if (typeof window === 'undefined') return;
 
     const token = localStorage.getItem('vibe_auth_token');
+    const serverUrl = getServerUrl() || undefined;
 
-    this.socket = io({
+    this.socket = io(serverUrl, {
       autoConnect: true,
       auth: { token },
       reconnection: true,

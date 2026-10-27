@@ -1,0 +1,77 @@
+{
+  "users": [
+    {
+      "id": "usr_anju",
+      "name": "Anjali Bommisetti",
+      "email": "anju@vibeconnect.io",
+      "phone": "9876543210",
+      "username": "anju",
+      "nickname": "Anju",
+      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
+      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
+      "avatar": "🦊",
+      "bio": "Private Duo Messenger ✨",
+      "status": "offline",
+      "lastSeen": "Active 02:45 PM",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1791862594837
+    },
+    {
+      "id": "usr_partner",
+      "name": "Partner (Member 2)",
+      "email": "partner@vibeconnect.io",
+      "phone": "9876543211",
+      "username": "partner",
+      "nickname": "Partner",
+      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
+      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
+      "avatar": "🌸",
+      "bio": "Always connected in our private space 💫",
+      "status": "online",
+      "lastSeen": "Active now",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1791948994837
+    }
+  ],
+  "groups": [],
+  "conversations": [
+    {
+      "id": "conv_duo_main",
+      "type": "direct",
+      "participantIds": [
+        "usr_anju",
+        "usr_partner"
+      ],
+      "groupId": null,
+      "isPinned": true,
+      "isMuted": false,
+      "isArchived": false,
+      "unreadCounts": {
+        "usr_anju": 0,
+        "usr_partner": 0
+      },
+      "lastMessagePreview": "🔒 Duo Private Vault Active",
+      "lastMessageTime": 1792120000000,
+      "createdAt": 1791862594837
+    }
+  ],
+  "messages": [],
+  "chatRequests": [],
+  "callLogs": [],
+  "sessions": {
+    "b5b843da30159e1c361b4f2d7bd0b769001a5d1e9c5712e722a196fa80f4d9f6": {
+      "userId": "usr_anju",
+      "expiresAt": 1795409784306
+    }
+  }
+}

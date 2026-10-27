@@ -3,9 +3,34 @@
 // Handles Authentication, Users, Conversations, Messages, Groups, and File Uploads
 // ==============================================================================
 
-const API_BASE = '/api';
+export function getServerUrl() {
+  if (typeof window === 'undefined') return '';
+  const stored = localStorage.getItem('vibe_server_url');
+  if (stored) return stored;
+
+  // Detect mobile APK (Capacitor runs on capacitor:// or localhost with no port)
+  const isMobileApp = window.location.protocol === 'capacitor:' || 
+    (window.location.hostname === 'localhost' && !window.location.port);
+    
+  if (isMobileApp) {
+    return 'http://10.12.220.120:5000';
+  }
+  return '';
+}
+
+export function setCustomServerUrl(url) {
+  if (url) {
+    localStorage.setItem('vibe_server_url', url.replace(/\/+$/, ''));
+  } else {
+    localStorage.removeItem('vibe_server_url');
+  }
+}
 
 class ApiClient {
+  getBaseUrl() {
+    const srv = getServerUrl();
+    return srv ? `${srv}/api` : '/api';
+  }
   getToken() {
     return localStorage.getItem('vibe_auth_token') || null;
   }
@@ -19,7 +44,7 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    const url = `${API_BASE}${endpoint}`;
+    const url = `${this.getBaseUrl()}${endpoint}`;
     const token = this.getToken();
 
     const headers = {

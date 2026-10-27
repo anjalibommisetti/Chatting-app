@@ -6,8 +6,13 @@
     "dev": "node dev.js",
     "client": "vite",
     "server": "node server.js",
+    "dev:backend": "node backend/server.js",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
     "start": "node server.js",
     "build": "vite build",
+    "build:apk": "vite build && npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "cap:sync": "npx cap sync android",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -24,6 +29,9 @@
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.1",

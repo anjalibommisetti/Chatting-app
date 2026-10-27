@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DuoConnect — 1-on-1 Chat, Voice & Video Calls</title>
+  <meta name="description" content="Ultra-fast, private 1-on-1 real-time text chat, HD voice calls, and video calls powered by WebRTC.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Lucide icons via CDN for crisp modern icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="theme-dark">
+  <div id="app" class="app-container">
+    
+    <!-- ==================== LOBBY / JOIN VIEW ==================== -->
+    <section id="lobby-view" class="view active-view">
+      <div class="lobby-card glassmorphism">
+        <div class="lobby-brand">
+          <div class="brand-icon">
+            <i data-lucide="video"></i>
+          </div>
+          <h1 class="brand-title">DuoConnect</h1>
+          <p class="brand-subtitle">Private 1-on-1 Voice, Video & Instant Chat</p>
+          <div class="brand-badge"><i data-lucide="shield-check"></i> End-to-End Direct P2P</div>
+        </div>
+
+        <!-- Profile Customization -->
+        <div class="profile-section">
+          <label class="form-label" for="username-input">Your Display Name</label>
+          <div class="input-with-action">
+            <div class="avatar-preview" id="lobby-avatar-preview">
+              <span id="lobby-avatar-emoji">🦊</span>
+            </div>
+            <input type="text" id="username-input" class="form-input" placeholder="Enter your name..." maxlength="25" />
+            <button type="button" id="random-name-btn" class="icon-btn-secondary" title="Randomize Name">
+              <i data-lucide="dice-5"></i>
+            </button>
+          </div>
+
+          <!-- Avatar Picker -->
+          <div class="avatar-picker-row">
+            <span class="avatar-label">Choose Avatar:</span>
+            <div class="avatar-options" id="avatar-options">
+              <button type="button" class="avatar-btn active" data-emoji="🦊">🦊</button>
+              <button type="button" class="avatar-btn" data-emoji="⚡">⚡</button>
+              <button type="button" class="avatar-btn" data-emoji="🚀">🚀</button>
+              <button type="button" class="avatar-btn" data-emoji="🐼">🐼</button>
+              <button type="button" class="avatar-btn" data-emoji="🌟">🌟</button>
+              <button type="button" class="avatar-btn" data-emoji="🦁">🦁</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Room Action Tabs / Options -->
+        <div class="room-action-container">
+          <div class="action-card create-card">
+            <div class="action-card-header">
+              <div class="action-icon create-icon"><i data-lucide="plus-circle"></i></div>
+              <div>
+                <h3>Create New Room</h3>
+                <p>Start a secure 2-person room and invite your partner</p>
+              </div>
+            </div>
+            <button type="button" id="create-room-btn" class="btn btn-primary btn-block">
+              <i data-lucide="sparkles"></i> Create 1-on-1 Room
+            </button>
+          </div>
+
+          <div class="action-divider">
+            <span>OR</span>
+          </div>
+
+          <div class="action-card join-card">
+            <div class="action-card-header">
+              <div class="action-icon join-icon"><i data-lucide="log-in"></i></div>
+              <div>
+                <h3>Join Existing Room</h3>
+                <p>Enter the 6-character room code shared by your friend</p>
+              </div>
+            </div>
+            <div class="join-input-group">
+              <input type="text" id="join-room-input" class="form-input uppercase-input" placeholder="e.g. DUO-842" maxlength="12" />
+              <button type="button" id="join-room-btn" class="btn btn-secondary">
+                <i data-lucide="arrow-right"></i> Join
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Device Quick Test Preview -->
+        <div class="device-preview-bar">
+          <div class="preview-info">
+            <span class="indicator-dot green"></span>
+            <span>Microphone & Camera ready</span>
+          </div>
+          <button type="button" id="test-media-btn" class="text-btn">
+            <i data-lucide="camera"></i> Test Camera/Mic
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MAIN CHAT & CALL ROOM VIEW ==================== -->
+    <section id="room-view" class="view">
+      <!-- Top App Bar -->
+      <header class="app-header glassmorphism">
+        <div class="header-left">
+          <div class="header-logo">
+            <div class="brand-icon-sm"><i data-lucide="video"></i></div>
+            <span class="logo-text">DuoConnect</span>
+          </div>
+
+          <div class="room-pill" id="room-info-pill" title="Click to copy invite link">
+            <i data-lucide="key-round"></i>
+            <span class="room-id-text" id="header-room-id">ROOM-ID</span>
+            <button type="button" class="copy-pill-btn" id="copy-room-btn" title="Copy room code">
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Partner Status Header -->
+        <div class="header-center">
+          <div class="partner-status-box" id="partner-status-box">
+            <div class="partner-avatar-wrap">
+              <span class="partner-avatar-emoji" id="header-partner-avatar">👤</span>
+              <span class="online-status-badge waiting" id="partner-online-indicator"></span>
+            </div>
+            <div class="partner-details">
+              <div class="partner-name-row">
+                <span class="partner-name" id="header-partner-name">Waiting for partner...</span>
+              </div>
+              <span class="partner-subtext" id="partner-subtext">Share room code to start</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Header Actions: Voice Call, Video Call, Sound, Leave -->
+        <div class="header-right">
+          <button type="button" id="header-invite-btn" class="btn-action btn-share" title="Share invite link">
+            <i data-lucide="share-2"></i>
+            <span class="btn-label">Invite</span>
+          </button>
+
+          <button type="button" id="header-voice-call-btn" class="btn-action btn-voice disabled" title="Start Voice Call" disabled>
+            <i data-lucide="phone"></i>
+            <span class="btn-label">Voice Call</span>
+          </button>
+
+          <button type="button" id="header-video-call-btn" class="btn-action btn-video disabled" title="Start Video Call" disabled>
+            <i data-lucide="video"></i>
+            <span class="btn-label">Video Call</span>
+          </button>
+
+          <button type="button" id="toggle-sound-btn" class="icon-btn-header" title="Toggle Sound Alerts">
+            <i data-lucide="volume-2" id="sound-icon"></i>
+          </button>
+
+          <button type="button" id="leave-room-btn" class="icon-btn-header btn-leave" title="Leave Room">
+            <i data-lucide="log-out"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Room Workspace -->
+      <main class="room-workspace" id="room-workspace">
+        
+        <!-- Video / Voice Call Active Container (Expandable / Side-by-Side) -->
+        <div class="call-stage hidden" id="call-stage">
+          
+          <!-- Call Header / Bar -->
+          <div class="call-stage-bar">
+            <div class="call-badge-status">
+              <span class="call-pulsing-dot"></span>
+              <span id="call-type-indicator">Video Call</span>
+              <span class="call-timer" id="call-timer">00:00</span>
+            </div>
+            <div class="call-stage-tools">
+              <button type="button" id="toggle-stage-view-btn" class="icon-btn-glass" title="Toggle Layout (Full / Side-by-side)">
+                <i data-lucide="layout-grid"></i>
+              </button>
+              <button type="button" id="pip-btn" class="icon-btn-glass" title="Picture-in-Picture">
+                <i data-lucide="picture-in-picture-2"></i>
+              </button>
+              <button type="button" id="fullscreen-btn" class="icon-btn-glass" title="Fullscreen">
+                <i data-lucide="maximize"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Grid / Stage -->
+          <div class="video-grid" id="video-grid">
+            
+            <!-- Remote Participant Stream -->
+            <div class="video-card remote-card" id="remote-video-card">
+              <video id="remote-video" autoplay playsinline></video>
+              
+              <!-- Placeholder when remote camera is off or during Voice Call -->
+              <div class="video-placeholder hidden" id="remote-video-placeholder">
+                <div class="placeholder-avatar-ring">
+                  <div class="placeholder-avatar" id="remote-placeholder-avatar">🦊</div>
+                  <canvas id="remote-audio-waveform" class="audio-waveform-canvas" width="200" height="200"></canvas>
+                </div>
+                <h4 id="remote-placeholder-name">Partner</h4>
+                <p class="placeholder-status" id="remote-placeholder-status">Camera is off</p>
+              </div>
+
+              <div class="video-overlay remote-overlay">
+                <span class="participant-tag" id="remote-name-tag">
+                  <i data-lucide="user"></i> <span id="remote-tag-name">Partner</span>
+                </span>
+                <span class="media-badge hidden" id="remote-mute-badge" title="Microphone Muted">
+                  <i data-lucide="mic-off"></i>
+                </span>
+              </div>
+            </div>
+
+            <!-- Local Participant Stream (PiP or Grid) -->
+            <div class="video-card local-card pip-mode" id="local-video-card">
+              <video id="local-video" autoplay playsinline muted></video>
+              
+              <!-- Local Placeholder when camera off -->
+              <div class="video-placeholder hidden" id="local-video-placeholder">
+                <div class="placeholder-avatar-sm" id="local-placeholder-avatar">Me</div>
+                <p>Camera Off</p>
+              </div>
+
+              <div class="video-overlay local-overlay">
+                <span class="participant-tag">
+                  <i data-lucide="user-check"></i> <span>You</span>
+                </span>
+                <span class="media-badge hidden" id="local-mute-badge" title="You are muted">
+                  <i data-lucide="mic-off"></i>
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Floating Call Controls Dock -->
+          <div class="call-controls-dock glassmorphism">
+            <button type="button" id="call-mic-btn" class="call-control-btn active" title="Mute/Unmute Mic">
+              <i data-lucide="mic" id="mic-icon"></i>
+              <span class="control-tooltip">Mic On</span>
+            </button>
+
+            <button type="button" id="call-camera-btn" class="call-control-btn active" title="Turn Camera On/Off">
+              <i data-lucide="video" id="camera-icon"></i>
+              <span class="control-tooltip">Camera On</span>
+            </button>
+
+            <button type="button" id="call-screen-btn" class="call-control-btn" title="Share Screen">
+              <i data-lucide="monitor-up" id="screen-icon"></i>
+              <span class="control-tooltip">Share Screen</span>
+            </button>
+
+            <button type="button" id="call-switch-type-btn" class="call-control-btn" title="Switch Call Mode (Voice/Video)">
+              <i data-lucide="refresh-cw"></i>
+              <span class="control-tooltip">Switch Mode</span>
+            </button>
+
+            <button type="button" id="call-hangup-btn" class="call-control-btn btn-hangup" title="End Call">
+              <i data-lucide="phone-off"></i>
+              <span class="control-tooltip">End Call</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Chat Conversation Area -->
+        <div class="chat-section" id="chat-section">
+          
+          <!-- Messages Scroll View -->
+          <div class="messages-container" id="messages-container">
+            <!-- Room Welcome Banner -->
+            <div class="system-welcome-card" id="system-welcome-card">
+              <div class="welcome-icon"><i data-lucide="lock"></i></div>
+              <h3>Private 1-on-1 Session Active</h3>
+              <p>Messages and calls are direct and end-to-end between the two of you. No third person can join.</p>
+              <div class="welcome-share-box">
+                <span class="share-box-label">Invite your partner:</span>
+                <div class="share-link-input-wrap">
+                  <input type="text" id="room-link-display" readonly />
+                  <button type="button" id="copy-welcome-link-btn" class="btn btn-sm btn-primary">
+                    <i data-lucide="copy"></i> Copy Link
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic Messages will be injected here -->
+          </div>
+
+          <!-- Typing Indicator Banner -->
+          <div class="typing-banner hidden" id="typing-banner">
+            <div class="typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="typing-text" id="typing-text">Partner is typing...</span>
+          </div>
+
+          <!-- Attachment Preview Box (if user attaches image/file) -->
+          <div class="attachment-preview-bar hidden" id="attachment-preview-bar">
+            <div class="attachment-thumbnail-wrap">
+              <img id="attachment-preview-img" src="" alt="Attachment" class="hidden" />
+              <div id="attachment-file-icon" class="file-icon-box hidden"><i data-lucide="file"></i></div>
+              <div class="attachment-info">
+                <span class="attachment-name" id="attachment-preview-name">file.png</span>
+                <span class="attachment-size" id="attachment-preview-size">1.2 MB</span>
+              </div>
+            </div>
+            <button type="button" id="cancel-attachment-btn" class="icon-btn-secondary" title="Remove attachment">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <!-- Emoji Picker Drawer (Collapsible) -->
+          <div class="emoji-drawer hidden" id="emoji-drawer">
+            <div class="emoji-category-list">
+              <span class="emoji-cat-title">Quick Reactions</span>
+              <div class="emoji-grid">
+                <button type="button" class="emoji-btn">❤️</button>
+                <button type="button" class="emoji-btn">😂</button>
+                <button type="button" class="emoji-btn">🔥</button>
+                <button type="button" class="emoji-btn">👍</button>
+                <button type="button" class="emoji-btn">🎉</button>
+                <button type="button" class="emoji-btn">😍</button>
+                <button type="button" class="emoji-btn">🙌</button>
+                <button type="button" class="emoji-btn">👏</button>
+                <button type="button" class="emoji-btn">🚀</button>
+                <button type="button" class="emoji-btn">✨</button>
+                <button type="button" class="emoji-btn">🤔</button>
+                <button type="button" class="emoji-btn">😭</button>
+                <button type="button" class="emoji-btn">😎</button>
+                <button type="button" class="emoji-btn">🥳</button>
+                <button type="button" class="emoji-btn">💯</button>
+                <button type="button" class="emoji-btn">👋</button>
+                <button type="button" class="emoji-btn">🙏</button>
+                <button type="button" class="emoji-btn">☕</button>
+                <button type="button" class="emoji-btn">🌸</button>
+                <button type="button" class="emoji-btn">⭐</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <div class="chat-input-bar">
+            <input type="file" id="file-input" class="hidden" accept="image/*,.pdf,.txt,.doc,.docx" />
+            
+            <button type="button" id="attach-file-btn" class="chat-tool-btn" title="Attach Image or File">
+              <i data-lucide="paperclip"></i>
+            </button>
+
+            <button type="button" id="toggle-emoji-btn" class="chat-tool-btn" title="Pick Emoji">
+              <i data-lucide="smile"></i>
+            </button>
+
+            <div class="chat-input-wrapper">
+              <textarea id="chat-textarea" placeholder="Type a message... (Press Enter to send)" rows="1" maxlength="2000"></textarea>
+            </div>
+
+            <button type="button" id="send-msg-btn" class="send-message-btn" title="Send Message">
+              <i data-lucide="send"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </main>
+    </section>
+
+    <!-- ==================== MODALS & CALL ALERTS ==================== -->
+    
+    <!-- Incoming Call Modal -->
+    <div class="modal-backdrop hidden" id="incoming-call-modal">
+      <div class="incoming-call-card glassmorphism">
+        <div class="call-pulse-rings">
+          <div class="pulse-ring ring-1"></div>
+          <div class="pulse-ring ring-2"></div>
+          <div class="pulse-ring ring-3"></div>
+          <div class="caller-avatar-large" id="incoming-caller-avatar">👤</div>
+        </div>
+
+        <h2 class="caller-name" id="incoming-caller-name">Partner Name</h2>
+        <p class="call-type-title" id="incoming-call-subtitle">Incoming Video Call...</p>
+
+        <div class="incoming-actions">
+          <button type="button" id="decline-call-btn" class="call-action-btn decline" title="Decline">
+            <i data-lucide="phone-off"></i>
+            <span>Decline</span>
+          </button>
+          <button type="button" id="accept-call-btn" class="call-action-btn accept" title="Accept">
+            <i data-lucide="phone-call"></i>
+            <span>Accept</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Outgoing Calling Modal -->
+    <div class="modal-backdrop hidden" id="outgoing-call-modal">
+      <div class="incoming-call-card glassmorphism">
+        <div class="call-pulse-rings outgoing">
+          <div class="pulse-ring ring-1"></div>
+          <div class="pulse-ring ring-2"></div>
+          <div class="caller-avatar-large" id="outgoing-partner-avatar">👤</div>
+        </div>
+
+        <h2 class="caller-name" id="outgoing-partner-name">Partner Name</h2>
+        <p class="call-type-title" id="outgoing-call-status">Ringing...</p>
+
+        <div class="incoming-actions single-action">
+          <button type="button" id="cancel-outgoing-btn" class="call-action-btn decline">
+            <i data-lucide="phone-off"></i>
+            <span>Cancel</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media Test Preview Modal -->
+    <div class="modal-backdrop hidden" id="media-test-modal">
+      <div class="media-test-card glassmorphism">
+        <div class="modal-header">
+          <h3><i data-lucide="settings"></i> Camera & Microphone Check</h3>
+          <button type="button" id="close-test-modal-btn" class="icon-btn-secondary"><i data-lucide="x"></i></button>
+        </div>
+        <div class="test-preview-container">
+          <video id="test-video" autoplay playsinline muted></video>
+          <div class="mic-level-container">
+            <span>Mic Volume:</span>
+            <div class="mic-level-bar">
+              <div class="mic-level-fill" id="mic-meter-fill"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="finish-test-btn" class="btn btn-primary btn-block">All Good, Ready!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <!-- Socket.io client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- App scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
