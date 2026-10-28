@@ -12,11 +12,12 @@ import {
   ShieldCheck, 
   Lock, 
   Sun,
-  Moon
+  Moon,
+  QrCode
 } from 'lucide-react';
 import { store } from '../../services/store';
 
-export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenProfile }) {
+export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenProfile, onOpenQR }) {
   const currentUser = store.currentUser;
   const isDark = store.settings.theme === 'dark';
 
@@ -48,14 +49,25 @@ export default function Sidebar({ currentTab, setTab, onOpenCreateGroup, onOpenP
           </div>
         </div>
 
-        {/* Quick Theme Toggle (Light / Dark) */}
-        <button
-          onClick={toggleTheme}
-          className="hidden lg:flex p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors cursor-pointer"
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-500" />}
-        </button>
+        <div className="flex items-center gap-1">
+          {/* QR Hub Button */}
+          <button
+            onClick={onOpenQR}
+            className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+            title="Scan QR or Show Profile QR"
+          >
+            <QrCode className="w-4 h-4" />
+          </button>
+
+          {/* Quick Theme Toggle (Light / Dark) */}
+          <button
+            onClick={toggleTheme}
+            className="hidden lg:flex p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors cursor-pointer"
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-500" />}
+          </button>
+        </div>
       </div>
 
       {/* Main Navigation Links */}

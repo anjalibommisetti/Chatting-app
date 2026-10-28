@@ -36,6 +36,7 @@ import CallHistoryView from './components/Calls/CallHistoryView';
 import ContactsView from './components/Contacts/ContactsView';
 import ProfileView from './components/Profile/ProfileView';
 import SettingsView from './components/Settings/SettingsView';
+import QRCodeModal from './components/Navigation/QRCodeModal';
 
 export default function App() {
   const [, setTick] = useState(0);
@@ -52,6 +53,7 @@ export default function App() {
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showNewChatByPhone, setShowNewChatByPhone] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Subscribe to reactive store updates
   useEffect(() => {
@@ -133,6 +135,7 @@ export default function App() {
         }}
         onOpenCreateGroup={() => setShowCreateGroup(true)}
         onOpenProfile={() => setCurrentTab('profile')}
+        onOpenQR={() => setShowQRModal(true)}
       />
 
       {/* Main Workspace Area */}
@@ -205,6 +208,7 @@ export default function App() {
         }}
         onOpenCreateGroup={() => setShowCreateGroup(true)}
         onOpenNewChatByPhone={() => setShowNewChatByPhone(true)}
+        onOpenQR={() => setShowQRModal(true)}
       />
 
       {/* Modals */}
@@ -246,6 +250,31 @@ export default function App() {
 
       {/* Real Voice & Video Calling Full-Screen Overlay */}
       <CallModal />
+
+      {/* Universal QR Code & Scanner Modal */}
+      <QRCodeModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        onUserScanned={async (scanned) => {
+          setShowQRModal(false);
+          if (!scanned) return;
+          const phone = scanned.phone ? scanned.phone.replace(/[^0-9]/g, '') : '';
+          let target = null;
+          if (phone) {
+            target = store.findUserByPhone(phone) || (await store.searchUserByPhoneOnline(phone));
+          }
+          if (!target && scanned.id) {
+            target = store.getUserById(scanned.id);
+          }
+          if (target) {
+            const conv = await store.getDirectConversation(target.id);
+            if (conv) {
+              setActiveConversationId(conv.id);
+              setCurrentTab('chats');
+            }
+          }
+        }}
+      />
     </div>
   );
 }
