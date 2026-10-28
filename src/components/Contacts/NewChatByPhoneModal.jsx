@@ -281,18 +281,33 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated, on
                 )
               ) : cleanPhone.length >= 10 ? (
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-center space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-300 font-medium">
-                      No user registered with number <strong className="text-purple-300">+91 {cleanPhone}</strong>
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Ask your friend to register with this mobile number to chat!
-                    </p>
+                  <div className="flex items-center justify-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-lg flex-shrink-0">
+                      📱
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-sm font-bold text-white">+91 {cleanPhone}</h4>
+                      <p className="text-[11px] text-purple-300">New Contact</p>
+                    </div>
                   </div>
 
                   <button
+                    onClick={async () => {
+                      const conv = await store.startChatWithPhoneNumber(cleanPhone);
+                      if (conv) {
+                        onChatCreated(conv.id);
+                        onClose();
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-purple-600/30 active:scale-95"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Start Chat with +91 {cleanPhone}</span>
+                  </button>
+
+                  <button
                     onClick={handleCopyLink}
-                    className="w-full py-2 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedLink ? 'Link Copied! Send it to your friend' : 'Copy App Link to Invite'}</span>

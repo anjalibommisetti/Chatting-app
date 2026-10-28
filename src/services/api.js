@@ -22,8 +22,9 @@ export function getServerUrl() {
     return 'http://172.27.31.120:5000';
   }
 
-  // 3. Web browser: if accessing via LAN IP, use the same host on port 5000
-  if (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  // 3. Web browser: if accessing via numeric LAN IP (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), use port 5000
+  const isLanIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
+  if (isLanIp) {
     return `${window.location.protocol}//${window.location.hostname}:5000`;
   }
 

@@ -862,6 +862,42 @@ class StoreService {
     return conv;
   }
 
+  async startChatWithPhoneNumber(phoneNumber) {
+    if (!this.currentUser || !phoneNumber) return null;
+    const clean = String(phoneNumber).replace(/[^0-9]/g, '');
+    if (!clean) return null;
+
+    // 1. Check if user already exists in store or online
+    let user = this.findUserByPhone(clean);
+    if (!user && clean.length >= 10) {
+      try {
+        user = await this.searchUserByPhoneOnline(clean);
+      } catch (e) {}
+    }
+
+    // 2. If user doesn't exist yet, create contact placeholder
+    if (!user) {
+      user = {
+        id: 'usr_phone_' + clean,
+        name: `+91 ${clean}`,
+        nickname: `User ${clean.slice(-4)}`,
+        phone: clean,
+        username: `user_${clean.slice(-4)}`,
+        avatar: '👤',
+        bio: 'Phone Contact',
+        status: 'offline',
+        lastSeen: 'Available'
+      };
+      if (!this.users.some(u => u.id === user.id)) {
+        this.users.push(user);
+        this.saveStorage('vibe_users', this.users);
+      }
+    }
+
+    // 3. Open or create conversation
+    return await this.getDirectConversation(user.id);
+  }
+
   // ============================================================================
   // GROUPS (STRICT 5-MEMBER MAXIMUM)
   // ============================================================================

@@ -122,14 +122,19 @@ export default function ChatList({
   const handleStartChatWithPhoneUser = async (user) => {
     if (!user) return;
     try {
-      const conv = await store.getDirectConversation(user.id);
+      let conv = null;
+      if (user.phone) {
+        conv = await store.startChatWithPhoneNumber(user.phone);
+      } else {
+        conv = await store.getDirectConversation(user.id);
+      }
       if (conv) {
         onSelectConversation(conv.id);
         setSearchQuery('');
         setPhoneMatchedUser(null);
       }
     } catch (e) {
-      console.error(e);
+      console.error('[ChatList] Failed to start chat:', e);
     }
   };
 
@@ -280,13 +285,23 @@ export default function ChatList({
               </div>
             </div>
           ) : cleanDigits.length >= 10 ? (
-            <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="text-xs text-slate-300 font-medium">
-                No user registered with <strong className="text-purple-300">+91 {cleanDigits}</strong>
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Share this app with them so they can join!
-              </p>
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#1c1b33] to-[#121626] border border-purple-500/40 text-center space-y-2.5 shadow-lg">
+              <div className="flex items-center justify-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-lg flex-shrink-0">
+                  📱
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <h4 className="text-xs font-bold text-white truncate">+91 {cleanDigits}</h4>
+                  <p className="text-[10px] text-purple-300">New Contact</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleStartChatWithPhoneUser({ id: 'usr_phone_' + cleanDigits, name: '+91 ' + cleanDigits, phone: cleanDigits })}
+                className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-purple-600/30 active:scale-95"
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+                <span>Start Chat with +91 {cleanDigits}</span>
+              </button>
             </div>
           ) : null}
         </div>
