@@ -126,13 +126,16 @@ class StoreService {
         this.messages.push(newMsg);
 
         // Update parent conversation
-        const conv = this.conversations.find(c => c.id === newMsg.conversationId);
+        let conv = this.conversations.find(c => c.id === newMsg.conversationId);
         if (conv) {
           conv.lastMessagePreview = newMsg.text || (newMsg.attachment ? `📎 ${newMsg.attachment.name || 'Attachment'}` : 'New message');
           conv.lastMessageTime = newMsg.timestamp;
           if (newMsg.senderId !== this.currentUser?.id) {
             conv.unreadCount = (conv.unreadCount || 0) + 1;
           }
+        } else {
+          // If conversation isn't yet present in client's conversation list, re-fetch from server!
+          this.loadBackendData();
         }
 
         // Notify with desktop banner and audio alert if from someone else
@@ -222,9 +225,19 @@ class StoreService {
     realtime.on('conversation-updated', ({ conversationId, lastMessage, unreadCount }) => {
       const conv = this.conversations.find(c => c.id === conversationId);
       if (conv) {
-        conv.lastMessagePreview = lastMessage.text || 'Attachment';
-        conv.lastMessageTime = lastMessage.timestamp;
-        conv.unreadCount = unreadCount;
+        conv.lastMessagePreview = lastMessage.text || (lastMessage.attachment ? `📎 ${lastMessage.attachment.name || 'Attachment'}` : 'New message');
+        conv.lastMessageTime = lastMessage.timestamp || Date.now();
+        if (unreadCount !== undefined) conv.unreadCount = unreadCount;
+        this.notify();
+      } else {
+        this.loadBackendData();
+      }
+    });
+
+    // 8b. Real-time direct conversation created
+    realtime.on('conversation-created', ({ conversation }) => {
+      if (conversation && !this.conversations.some(c => c.id === conversation.id)) {
+        this.conversations.unshift(conversation);
         this.notify();
       }
     });

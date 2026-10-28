@@ -8,13 +8,25 @@ export function getServerUrl() {
   const stored = localStorage.getItem('vibe_server_url');
   if (stored) return stored;
 
-  // Detect mobile APK (Capacitor runs on capacitor:// or localhost with no port)
+  // 1. Environment variable (e.g. from Render or .env)
+  if (import.meta.env?.VITE_BACKEND_URL) {
+    return import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, '');
+  }
+
+  // 2. Mobile APK (Capacitor runs on capacitor:// or localhost with no port)
   const isMobileApp = window.location.protocol === 'capacitor:' || 
     (window.location.hostname === 'localhost' && !window.location.port);
     
   if (isMobileApp) {
-    return 'http://10.12.220.120:5000';
+    // Current computer local Wi-Fi IP (172.27.31.120) or Render URL
+    return 'http://172.27.31.120:5000';
   }
+
+  // 3. Web browser: if accessing via LAN IP, use the same host on port 5000
+  if (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
+
   return '';
 }
 

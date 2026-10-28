@@ -396,6 +396,7 @@ app.post('/api/conversations', authenticate, (req, res) => {
   if (!target) return res.status(404).json({ success: false, error: 'Target user not found' });
 
   const conv = db.getOrCreateDirectConversation(req.user.id, targetUserId);
+  io.to('user_' + targetUserId).emit('conversation-created', { conversation: conv });
   return res.json({ success: true, conversation: conv, id: conv.id, ...conv });
 });
 
@@ -453,9 +454,10 @@ app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
   // Broadcast to socket room
   io.to('conv_' + conv.id).emit('receive-message', newMsg);
   
-  // Notify user personal rooms for unread indicators
+  // Notify user personal rooms for real-time delivery and unread indicators
   conv.participantIds.forEach(pid => {
     if (pid !== req.user.id) {
+      io.to('user_' + pid).emit('receive-message', newMsg);
       io.to('user_' + pid).emit('conversation-updated', {
         conversationId: conv.id,
         lastMessage: newMsg,
@@ -772,6 +774,7 @@ io.on('connection', (socket) => {
     }
 
     try {
+      const conv = db.getConversationById(data.conversationId);
       const newMsg = db.createMessage({
         conversationId: data.conversationId,
         senderId: user.id,
@@ -782,7 +785,22 @@ io.on('connection', (socket) => {
         isGif: data.isGif
       });
 
+      // Broadcast to active conversation room
       socket.to('conv_' + data.conversationId).emit('receive-message', newMsg);
+      
+      // Also notify all participant personal user rooms in real-time
+      if (conv && Array.isArray(conv.participantIds)) {
+        conv.participantIds.forEach(pid => {
+          if (pid !== user.id) {
+            io.to('user_' + pid).emit('receive-message', newMsg);
+            io.to('user_' + pid).emit('conversation-updated', {
+              conversationId: conv.id,
+              lastMessage: newMsg,
+              unreadCount: conv.unreadCounts ? conv.unreadCounts[pid] : 1
+            });
+          }
+        });
+      }
       
       if (callback) callback({ success: true, message: newMsg });
       socket.emit('message-sent', newMsg);
