@@ -3,7 +3,7 @@
 // No clutter, no confusing marketing matter — just fast chat & calls
 // ==============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, 
   Phone, 
@@ -36,6 +36,30 @@ export default function WelcomeScreen({ onQuickLogin }) {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+
+  // Forgot password inline state
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotResetCode, setForgotResetCode] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotStep, setForgotStep] = useState(1); // 1: enter phone/email, 2: enter code + new pw, 3: done
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotInfo, setForgotInfo] = useState('');
+
+  // All registered users from store (for Quick Login section)
+  const [allUsers, setAllUsers] = useState([]);
+
+  useEffect(() => {
+    // Load all users from store to show in quick login
+    const load = () => {
+      const users = store.users && store.users.length > 0 ? store.users : [];
+      setAllUsers(users);
+    };
+    load();
+    const unsub = store.subscribe(load);
+    return unsub;
+  }, []);
 
   // Signup form state
   const [signupName, setSignupName] = useState('');
@@ -95,6 +119,59 @@ export default function WelcomeScreen({ onQuickLogin }) {
       setLoginError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  // --- Forgot Password handlers ---
+  const handleForgotRequest = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    if (!forgotIdentifier.trim()) {
+      setForgotError('Please enter your mobile number or email.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const { api } = await import('../../services/api');
+      // Try phone or email: backend accepts email, so we try email format
+      const isEmail = forgotIdentifier.includes('@');
+      const payload = isEmail
+        ? forgotIdentifier.trim()
+        : `${forgotIdentifier.trim().replace(/[^0-9]/g, '')}@vibechat.io`;
+      const res = await api.forgotPassword(payload);
+      setForgotStep(2);
+      if (res.devResetCode || res.resetCode || res.code) {
+        const code = res.devResetCode || res.resetCode || res.code;
+        setForgotResetCode(code);
+        setForgotInfo(`✅ Reset code generated: ${code} (auto-filled for your convenience)`);
+      }
+    } catch (err) {
+      setForgotError(err.message || 'Could not generate reset code. Check your mobile number.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleForgotReset = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    if (!forgotResetCode.trim() || forgotNewPassword.length < 6) {
+      setForgotError('Enter the reset code and a password of at least 6 characters.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const { api } = await import('../../services/api');
+      const isEmail = forgotIdentifier.includes('@');
+      const email = isEmail
+        ? forgotIdentifier.trim()
+        : `${forgotIdentifier.trim().replace(/[^0-9]/g, '')}@vibechat.io`;
+      await api.resetPassword({ email, resetCode: forgotResetCode.trim(), newPassword: forgotNewPassword });
+      setForgotStep(3);
+    } catch (err) {
+      setForgotError(err.message || 'Password reset failed. Invalid or expired code.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -258,7 +335,105 @@ export default function WelcomeScreen({ onQuickLogin }) {
                 </>
               )}
             </button>
+
+            {/* Forgot Password link */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => { setShowForgot(true); setForgotStep(1); setForgotError(''); setForgotInfo(''); setForgotIdentifier(loginIdentifier); setForgotResetCode(''); setForgotNewPassword(''); }}
+                className="text-xs text-purple-400 hover:text-purple-300 underline cursor-pointer transition-colors"
+              >
+                Forgot Password? Reset it here
+              </button>
+            </div>
           </form>
+        )}
+
+        {/* Forgot Password Inline Panel */}
+        {activeTab === 'login' && showForgot && (
+          <div className="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-bold text-white">🔑 Reset Password</h3>
+              <button type="button" onClick={() => { setShowForgot(false); setForgotStep(1); }} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {forgotError && (
+              <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+            {forgotInfo && (
+              <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{forgotInfo}</span>
+              </div>
+            )}
+
+            {forgotStep === 1 && (
+              <form onSubmit={handleForgotRequest} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Mobile Number or Email</label>
+                  <input
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={e => setForgotIdentifier(e.target.value)}
+                    placeholder="e.g. 9390064784"
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <button type="submit" disabled={forgotLoading} className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                  {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Generate Reset Code
+                </button>
+              </form>
+            )}
+
+            {forgotStep === 2 && (
+              <form onSubmit={handleForgotReset} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Reset Code (6 digits)</label>
+                  <input
+                    type="text"
+                    value={forgotResetCode}
+                    onChange={e => setForgotResetCode(e.target.value)}
+                    placeholder="e.g. 123456"
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">New Password</label>
+                  <input
+                    type="password"
+                    value={forgotNewPassword}
+                    onChange={e => setForgotNewPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <button type="submit" disabled={forgotLoading} className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                  {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Set New Password
+                </button>
+              </form>
+            )}
+
+            {forgotStep === 3 && (
+              <div className="text-center space-y-3">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                <p className="text-sm font-semibold text-white">Password changed successfully!</p>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgot(false); setForgotStep(1); setLoginPassword(''); }}
+                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* TAB 2: CREATE ACCOUNT FORM */}
@@ -373,35 +548,29 @@ export default function WelcomeScreen({ onQuickLogin }) {
           </form>
         )}
 
-        {/* Quick Demo Accounts (1-Click Test) */}
+        {/* Quick Demo Accounts (1-Click Test) - shows ALL registered users */}
         <div className="mt-6 pt-5 border-t border-white/10">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block text-center mb-3">
             ⚡ Quick Demo Accounts (1-Click Test)
           </span>
           <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => onQuickLogin('usr_anju')}
-              className="p-2.5 rounded-xl bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-slate-200 transition-all cursor-pointer flex items-center gap-2 group text-left"
-            >
-              <span className="text-xl group-hover:scale-110 transition-transform">🦊</span>
-              <div className="truncate">
-                <div className="text-xs font-bold text-white group-hover:text-purple-300 truncate">Anjali</div>
-                <div className="text-[10px] text-slate-400 font-mono">9876543210</div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onQuickLogin('usr_partner')}
-              className="p-2.5 rounded-xl bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-slate-200 transition-all cursor-pointer flex items-center gap-2 group text-left"
-            >
-              <span className="text-xl group-hover:scale-110 transition-transform">🌸</span>
-              <div className="truncate">
-                <div className="text-xs font-bold text-white group-hover:text-purple-300 truncate">Partner</div>
-                <div className="text-[10px] text-slate-400 font-mono">9876543211</div>
-              </div>
-            </button>
+            {(allUsers.length > 0 ? allUsers : [
+              { id: 'usr_anju', nickname: 'Anjali', phone: '9876543210', avatar: '🦊' },
+              { id: 'usr_partner', nickname: 'Partner', phone: '9876543211', avatar: '🌸' }
+            ]).map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                onClick={() => onQuickLogin(u.id)}
+                className="p-2.5 rounded-xl bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-slate-200 transition-all cursor-pointer flex items-center gap-2 group text-left"
+              >
+                <span className="text-xl group-hover:scale-110 transition-transform flex-shrink-0">{u.avatar || '👤'}</span>
+                <div className="truncate min-w-0">
+                  <div className="text-xs font-bold text-white group-hover:text-purple-300 truncate">{u.nickname || u.name}</div>
+                  <div className="text-[10px] text-slate-400 font-mono truncate">{u.phone}</div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 
