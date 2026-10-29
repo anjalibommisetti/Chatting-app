@@ -106,6 +106,27 @@
       "createdAt": 1792119355005
     },
     {
+      "id": "user_7893286420",
+      "name": "Priya",
+      "email": "7893286420@vibechat.io",
+      "phone": "7893286420",
+      "username": "priya_7893",
+      "nickname": "Priya",
+      "passwordHash": "be1cec9413a26f2d4cc0b444f9b5620d8bc47626bbfd3d4a00bd262d33f0975902fe4bc8347513d8c646a01029284de92b0d0e8b6a984ae0ab74f05f2f18c412",
+      "salt": "b843e1c9b3fc464ff3acaec396cce1da",
+      "avatar": "🌸",
+      "bio": "Hey there! I am using VibeChat ✨",
+      "status": "online",
+      "lastSeen": "Active recently",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1793291000000
+    },
+    {
       "id": "3a107584-c251-43f4-91c9-d7c561664429",
       "name": "Bhumi",
       "email": "6381076854@vibechat.io",
