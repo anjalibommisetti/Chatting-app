@@ -47,20 +47,6 @@ export default function WelcomeScreen({ onQuickLogin }) {
   const [forgotError, setForgotError] = useState('');
   const [forgotInfo, setForgotInfo] = useState('');
 
-  // All registered users from store (for Quick Login section)
-  const [allUsers, setAllUsers] = useState([]);
-
-  useEffect(() => {
-    // Load all users from store to show in quick login
-    const load = () => {
-      const users = store.users && store.users.length > 0 ? store.users : [];
-      setAllUsers(users);
-    };
-    load();
-    const unsub = store.subscribe(load);
-    return unsub;
-  }, []);
-
   // Signup form state
   const [signupName, setSignupName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
@@ -547,32 +533,6 @@ export default function WelcomeScreen({ onQuickLogin }) {
             </button>
           </form>
         )}
-
-        {/* Quick Demo Accounts (1-Click Test) - shows ALL registered users */}
-        <div className="mt-6 pt-5 border-t border-white/10">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block text-center mb-3">
-            ⚡ Quick Demo Accounts (1-Click Test)
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            {(allUsers.length > 0 ? allUsers : [
-              { id: 'usr_anju', nickname: 'Anjali', phone: '9876543210', avatar: '🦊' },
-              { id: 'usr_partner', nickname: 'Partner', phone: '9876543211', avatar: '🌸' }
-            ]).map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => onQuickLogin(u.id)}
-                className="p-2.5 rounded-xl bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-slate-200 transition-all cursor-pointer flex items-center gap-2 group text-left"
-              >
-                <span className="text-xl group-hover:scale-110 transition-transform flex-shrink-0">{u.avatar || '👤'}</span>
-                <div className="truncate min-w-0">
-                  <div className="text-xs font-bold text-white group-hover:text-purple-300 truncate">{u.nickname || u.name}</div>
-                  <div className="text-[10px] text-slate-400 font-mono truncate">{u.phone}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Server Connection Status & Config Link */}
         <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
