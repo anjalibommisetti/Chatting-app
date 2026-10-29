@@ -41,6 +41,90 @@
         "soundAlerts": true
       },
       "createdAt": 1791948994837
+    },
+    {
+      "id": "63492643-ecf2-47b1-a241-bb40f868380b",
+      "name": "Alex",
+      "email": "9876543212@vibechat.io",
+      "phone": "9876543212",
+      "username": "alex",
+      "nickname": "Alex",
+      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
+      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
+      "avatar": "⚡",
+      "bio": "Available for video calls 🎧",
+      "status": "online",
+      "lastSeen": "Active recently",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1791880277560
+    },
+    {
+      "id": "ade3c428-97d2-47ba-b909-f307fbd4c0a6",
+      "name": "Sammy",
+      "email": "9876543213@vibechat.io",
+      "phone": "9876543213",
+      "username": "sammy",
+      "nickname": "Sammy",
+      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
+      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
+      "avatar": "🚀",
+      "bio": "Exploring tech!",
+      "status": "online",
+      "lastSeen": "Active recently",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1791880277560
+    },
+    {
+      "id": "1a8e1dfd-6dd2-4aca-94d1-6560e0c9fbfc",
+      "name": "Anju",
+      "email": "9390064784@vibechat.io",
+      "phone": "9390064784",
+      "username": "anju_4784",
+      "nickname": "Anju",
+      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
+      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
+      "avatar": "🦊",
+      "bio": "Hey there! I am using VibeConnect ✨",
+      "status": "online",
+      "lastSeen": "Active recently",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1792119355005
+    },
+    {
+      "id": "3a107584-c251-43f4-91c9-d7c561664429",
+      "name": "Bhumi",
+      "email": "6381076854@vibechat.io",
+      "phone": "6381076854",
+      "username": "bhumi",
+      "nickname": "Bhumi",
+      "passwordHash": "75a81865c357a51c9a27010ffd727f213285436ec391d1c3a49f43c8ba87fef05cd68d195696f075334d126c422b92cd262190bcc5cd8044ab3ebeb0092d55c0",
+      "salt": "e5b7218ac93f412d8a546b81d6d3765e",
+      "avatar": "🦊",
+      "bio": "Hey there! I am using VibeConnect ✨",
+      "status": "online",
+      "lastSeen": "Active recently",
+      "blockedUserIds": [],
+      "settings": {
+        "theme": "dark",
+        "readReceipts": true,
+        "soundAlerts": true
+      },
+      "createdAt": 1792119543422
     }
   ],
   "groups": [],

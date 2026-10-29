@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +15,14 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
+// Supabase Live Client Connection
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://jfqujqsvivilnwcgtizh.supabase.co';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmcXVqcXN2aXZpbG53Y2d0aXpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4NzUxMDcsImV4cCI6MjEwNzQ1MTEwN30.hWVuE5hGoL4zVE2bnwuSwWb4vkVZT2iiPsnJ4IvVEtc';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false }
+});
 
 // Ensure data & uploads directories exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -240,6 +249,24 @@ class JSONDatabase {
 
     this.data.users.push(newUser);
     this.save();
+
+    // Live Sync to Supabase profiles table
+    if (supabase) {
+      supabase.from('profiles').upsert({
+        id: crypto.randomUUID(),
+        phone_number: newUser.phone,
+        username: newUser.username,
+        nickname: newUser.nickname,
+        avatar_url: newUser.avatar,
+        bio: newUser.bio,
+        status: 'online',
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('[Supabase Live Sync] Notice:', error.message);
+        else console.log(`[Supabase Live Sync] ✅ Saved ${newUser.username} (${newUser.phone}) to Supabase!`);
+      }).catch(e => console.warn('[Supabase Live Sync] Notice:', e.message));
+    }
+
     return newUser;
   }
 
@@ -261,7 +288,80 @@ class JSONDatabase {
     }
 
     this.save();
+
+    // Live Sync update to Supabase
+    if (supabase && user.phone) {
+      supabase.from('profiles').update({
+        nickname: user.nickname,
+        avatar_url: user.avatar,
+        bio: user.bio,
+        status: user.status,
+        last_seen: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('phone_number', user.phone).then(({ error }) => {
+        if (error) console.warn('[Supabase Live Sync] Notice:', error.message);
+      }).catch(() => {});
+    }
+
     return user;
+  }
+
+  async syncFromSupabase() {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (error) {
+        console.warn('[Supabase Sync] Could not fetch profiles:', error.message);
+        return;
+      }
+      if (!data || data.length === 0) return;
+
+      let hasChanges = false;
+      for (const p of data) {
+        const cleanPhone = (p.phone_number || '').replace(/[^0-9]/g, '');
+        if (!cleanPhone) continue;
+
+        let existing = this.data.users.find(u => u.phone === cleanPhone);
+        if (!existing) {
+          let username = (p.username || cleanPhone).toLowerCase().replace(/[^a-z0-9_]/g, '');
+          if (this.data.users.some(u => u.username === username)) {
+            username = `${username}_${cleanPhone.slice(-4)}`;
+          }
+
+          const newUser = {
+            id: p.id || ('usr_' + cleanPhone),
+            name: p.nickname || p.username || ('User ' + cleanPhone.slice(-4)),
+            email: `${cleanPhone}@vibechat.io`,
+            phone: cleanPhone,
+            username: username,
+            nickname: p.nickname || p.username || 'User',
+            passwordHash: DEFAULT_HASH,
+            salt: DEFAULT_SALT,
+            avatar: p.avatar_url || '🦊',
+            bio: p.bio || 'Using VibeConnect ✨',
+            status: p.status || 'offline',
+            lastSeen: 'Active recently',
+            blockedUserIds: [],
+            settings: {
+              theme: 'dark',
+              readReceipts: true,
+              soundAlerts: true
+            },
+            createdAt: p.created_at ? new Date(p.created_at).getTime() : Date.now()
+          };
+          this.data.users.push(newUser);
+          hasChanges = true;
+          console.log(`[Supabase Sync] Loaded profile: ${newUser.nickname} (${cleanPhone})`);
+        }
+      }
+
+      if (hasChanges) {
+        this.save();
+        console.log(`[Supabase Sync] Synced profiles from Supabase! Total active accounts: ${this.data.users.length}`);
+      }
+    } catch (err) {
+      console.warn('[Supabase Sync] Notice:', err.message);
+    }
   }
 
   deleteUser(id) {

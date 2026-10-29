@@ -18,7 +18,7 @@ async function runDev() {
 
   if (!isServerRunning) {
     console.log('\x1b[36m%s\x1b[0m', '🚀 Starting Backend Server (Express + WebSockets on port 5000)...');
-    serverProcess = spawn('node', ['server.js'], { stdio: 'inherit', shell: true });
+    serverProcess = spawn('node', ['--dns-result-order=ipv4first', 'server.js'], { stdio: 'inherit', shell: true });
   } else {
     console.log('\x1b[32m%s\x1b[0m', '✅ Backend Server is already running on port 5000.');
   }

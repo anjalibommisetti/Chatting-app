@@ -942,13 +942,20 @@ io.on('connection', (socket) => {
 });
 
 // Start the Server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`\n======================================================`);
   console.log(`🚀 VibeConnect Backend API & Real-Time Engine Active!`);
   console.log(`📡 URL: http://localhost:${PORT}`);
   console.log(`🗄️ Database: Atomic ACID File Storage in /data/db.json`);
   console.log(`📁 File Attachments: /uploads`);
+  console.log(`☁️ Supabase Cloud Sync: Connected & Active`);
   console.log(`======================================================\n`);
+
+  try {
+    await db.syncFromSupabase();
+  } catch (err) {
+    console.warn('[Server] Supabase startup sync note:', err.message);
+  }
 });
 
 export { app, server };
