@@ -451,16 +451,22 @@ app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
     isGif
   });
 
+  const payloadMsg = {
+    ...newMsg,
+    senderName: req.user.nickname || req.user.name,
+    senderAvatar: req.user.avatar
+  };
+
   // Broadcast to socket room
-  io.to('conv_' + conv.id).emit('receive-message', newMsg);
+  io.to('conv_' + conv.id).emit('receive-message', payloadMsg);
   
   // Notify user personal rooms for real-time delivery and unread indicators
   conv.participantIds.forEach(pid => {
     if (pid !== req.user.id) {
-      io.to('user_' + pid).emit('receive-message', newMsg);
+      io.to('user_' + pid).emit('receive-message', payloadMsg);
       io.to('user_' + pid).emit('conversation-updated', {
         conversationId: conv.id,
-        lastMessage: newMsg,
+        lastMessage: payloadMsg,
         unreadCount: conv.unreadCounts ? conv.unreadCounts[pid] : 1
       });
     }

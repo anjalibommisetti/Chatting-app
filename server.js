@@ -282,7 +282,7 @@ function handleUserSearch(req, res) {
   let users = db.data.users.map(u => db.sanitizeUser(u));
 
   if (query) {
-    users = users.filter(u => 
+    users = users.filter(u =>
       u.name.toLowerCase().includes(query) ||
       u.username.toLowerCase().includes(query) ||
       (u.nickname && u.nickname.toLowerCase().includes(query)) ||
@@ -327,7 +327,7 @@ app.put('/api/users/profile', authenticate, (req, res) => {
   const { name, nickname, bio, avatar, status } = req.body;
   const updated = db.updateUser(req.user.id, { name, nickname, bio, avatar, status });
   const sanitized = db.sanitizeUser(updated);
-  
+
   io.emit('user-status-changed', {
     userId: req.user.id,
     status: updated.status,
@@ -451,16 +451,22 @@ app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
     isGif
   });
 
+  const payloadMsg = {
+    ...newMsg,
+    senderName: req.user.nickname || req.user.name,
+    senderAvatar: req.user.avatar
+  };
+
   // Broadcast to socket room
-  io.to('conv_' + conv.id).emit('receive-message', newMsg);
-  
+  io.to('conv_' + conv.id).emit('receive-message', payloadMsg);
+
   // Notify user personal rooms for real-time delivery and unread indicators
   conv.participantIds.forEach(pid => {
     if (pid !== req.user.id) {
-      io.to('user_' + pid).emit('receive-message', newMsg);
+      io.to('user_' + pid).emit('receive-message', payloadMsg);
       io.to('user_' + pid).emit('conversation-updated', {
         conversationId: conv.id,
-        lastMessage: newMsg,
+        lastMessage: payloadMsg,
         unreadCount: conv.unreadCounts ? conv.unreadCounts[pid] : 1
       });
     }
@@ -787,7 +793,7 @@ io.on('connection', (socket) => {
 
       // Broadcast to active conversation room
       socket.to('conv_' + data.conversationId).emit('receive-message', newMsg);
-      
+
       // Also notify all participant personal user rooms in real-time
       if (conv && Array.isArray(conv.participantIds)) {
         conv.participantIds.forEach(pid => {
@@ -801,7 +807,7 @@ io.on('connection', (socket) => {
           }
         });
       }
-      
+
       if (callback) callback({ success: true, message: newMsg });
       socket.emit('message-sent', newMsg);
     } catch (err) {
@@ -921,7 +927,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (user) {
       activeSockets.delete(socket.id);
-      
+
       const hasOtherSockets = Array.from(activeSockets.values()).includes(user.id);
       if (!hasOtherSockets) {
         const lastSeen = 'Active ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

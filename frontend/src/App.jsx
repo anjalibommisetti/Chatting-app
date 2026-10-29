@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { store } from './services/store';
 import { calling } from './services/webrtc';
+import { notifications } from './services/notifications';
 
 // Navigation
 import Sidebar from './components/Navigation/Sidebar';
@@ -68,6 +69,22 @@ export default function App() {
       setActiveConversationId(store.conversations[0].id);
     }
   }, [currentUser, activeConversationId]);
+
+  // Handle notification clicks to open specific conversation & request notification permissions
+  useEffect(() => {
+    window.__openConversation = (convId) => {
+      if (convId) {
+        setActiveConversationId(convId);
+        setCurrentTab('chats');
+      }
+    };
+    if (currentUser) {
+      notifications.requestPermission().catch(() => {});
+    }
+    return () => {
+      delete window.__openConversation;
+    };
+  }, [currentUser]);
 
   // If user is not logged in, show Welcome / Onboarding Screen
   if (!currentUser) {

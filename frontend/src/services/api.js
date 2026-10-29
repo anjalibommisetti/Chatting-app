@@ -13,22 +13,17 @@ export function getServerUrl() {
     return import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, '');
   }
 
-  // 2. Mobile APK (Capacitor runs on capacitor:// or localhost with no port)
-  const isMobileApp = window.location.protocol === 'capacitor:' || 
+  // 2. Mobile APK / Capacitor native runtime
+  const isCapacitor = (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) ||
+    window.location.protocol === 'capacitor:' || 
     (window.location.hostname === 'localhost' && !window.location.port);
     
-  if (isMobileApp) {
-    // Current computer local Wi-Fi IP (172.27.31.120) or Render URL
-    return 'http://172.27.31.120:5000';
+  if (isCapacitor) {
+    return 'https://chatting-app-3f5q.onrender.com';
   }
 
-  // 3. Web browser: if accessing via numeric LAN IP (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), use port 5000
-  const isLanIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
-  if (isLanIp) {
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
-  }
-
-  return '';
+  // 3. Web browsers (Chrome, Safari, Firefox, Android Chrome, iOS Safari):
+  return 'https://chatting-app-3f5q.onrender.com';
 }
 
 export function setCustomServerUrl(url) {
@@ -36,6 +31,20 @@ export function setCustomServerUrl(url) {
     localStorage.setItem('vibe_server_url', url.replace(/\/+$/, ''));
   } else {
     localStorage.removeItem('vibe_server_url');
+  }
+}
+
+export async function testServerConnection(customUrl) {
+  const base = (customUrl !== undefined ? customUrl : getServerUrl()) || '';
+  const target = base ? `${base}/api/users` : '/api/users';
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(target, { signal: timeout.signal });
+    clearTimeout(timeout);
+    return { ok: true, status: res.status, url: base || 'Local Relative /api' };
+  } catch (err) {
+    return { ok: false, error: err.message, url: base || 'Local Relative /api' };
   }
 }
 

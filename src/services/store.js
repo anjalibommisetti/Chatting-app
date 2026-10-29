@@ -138,13 +138,14 @@ class StoreService {
           this.loadBackendData();
         }
 
-        // Notify with desktop banner and audio alert if from someone else
+        // Notify with system status bar notification and audio alert if from someone else
         if (newMsg.senderId !== this.currentUser?.id) {
           const sender = this.getUserById(newMsg.senderId);
+          const senderName = newMsg.senderName || sender?.name || sender?.nickname || 'New Message';
           notifications.showMessageNotification({
-            senderName: sender?.name || 'New Message',
+            senderName,
             text: newMsg.text,
-            avatar: sender?.avatar,
+            avatar: newMsg.senderAvatar || sender?.avatar,
             conversationId: newMsg.conversationId
           });
         } else if (this.settings.soundAlerts) {
@@ -402,10 +403,13 @@ class StoreService {
       }
 
       await this.loadBackendData();
+
+      // Auto-prompt notification permissions
+      notifications.requestPermission().catch(() => {});
+
       this.notify();
       return res.user;
     } catch (err) {
-      // If server is not reachable, gracefully fallback to local register
       const isConnectionErr = err.message && (
         err.message.includes('backend server is running') ||
         err.message.includes('Failed to fetch') ||
@@ -414,44 +418,41 @@ class StoreService {
       );
 
       if (isConnectionErr) {
-        const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-        const localUser = {
-          id: 'usr_' + Date.now(),
-          name: name.trim(),
-          email: email || `${cleanPhone || 'user'}@vibechat.io`,
-          phone: cleanPhone || '9876543210',
-          username: username || (cleanPhone ? 'user_' + cleanPhone.slice(-4) : name.toLowerCase().replace(/[^a-z0-9_]/g, '')),
-          nickname: name.trim().split(' ')[0],
-          avatar: avatar || '🦊',
-          bio: bio || 'Available for Chat & Calls 💬',
-          status: 'online',
-          lastSeen: 'Active now'
-        };
-        this.currentUser = localUser;
-        if (!this.users.some(u => u.id === localUser.id)) {
-          this.users.push(localUser);
-          this.saveStorage('vibe_users', this.users);
-        }
-        this.saveStorage('vibe_current_user', this.currentUser);
-        this.isVaultUnlocked = true;
-        this.notify();
-        return localUser;
+        throw new Error('Cannot connect to Chat Server. Please verify the backend is running and your device is on the same network.');
       }
       throw err;
     }
   }
 
   async logIn(identifier, password) {
-    const res = await api.login(identifier, password);
-    this.currentUser = res.user;
+    try {
+      const res = await api.login(identifier, password);
+      this.currentUser = res.user;
 
-    if (res.token) {
-      realtime.updateAuthToken(res.token);
+      if (res.token) {
+        realtime.updateAuthToken(res.token);
+      }
+
+      await this.loadBackendData();
+
+      // Auto-prompt notification permissions
+      notifications.requestPermission().catch(() => {});
+
+      this.notify();
+      return res.user;
+    } catch (err) {
+      const isConnectionErr = err.message && (
+        err.message.includes('backend server is running') ||
+        err.message.includes('Failed to fetch') ||
+        err.message.includes('NetworkError') ||
+        err.message.includes('504')
+      );
+
+      if (isConnectionErr) {
+        throw new Error('Cannot connect to Chat Server. Please verify the backend is running and your device is on the same network.');
+      }
+      throw err;
     }
-
-    await this.loadBackendData();
-    this.notify();
-    return res.user;
   }
 
   async quickSwitchUser(userId) {

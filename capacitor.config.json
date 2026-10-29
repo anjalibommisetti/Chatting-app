@@ -1,5 +1,17 @@
 {
   "appId": "com.vibechat.app",
   "appName": "VibeChat",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_launcher",
+      "iconColor": "#9333ea",
+      "sound": "beep.wav"
+    }
+  }
 }
