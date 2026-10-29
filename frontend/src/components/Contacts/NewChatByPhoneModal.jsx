@@ -124,8 +124,13 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated, on
     });
   };
 
-  // Other available registered users (excluding current user)
-  const registeredContacts = (store.users || []).filter(u => u.id !== store.currentUser?.id);
+  // Other available registered users (excluding current user, and only those with a real name)
+  const registeredContacts = (store.users || []).filter(u => {
+    if (u.id === store.currentUser?.id) return false;
+    const displayName = u.nickname || u.name || '';
+    // Skip contacts whose "name" is just their phone number
+    return displayName && !displayName.match(/^\+?[\d\s]{7,}$/) && displayName !== u.phone;
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn select-none">
@@ -200,9 +205,7 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated, on
                 </button>
               )}
             </div>
-            <span className="text-[11px] text-slate-500 mt-1 block">
-              Test with: <strong className="text-purple-300 cursor-pointer" onClick={() => setPhoneNumber('9876543210')}>9876543210</strong> (Anjali) or <strong className="text-purple-300 cursor-pointer" onClick={() => setPhoneNumber('9876543211')}>9876543211</strong> (Partner)
-            </span>
+
           </div>
 
           {/* REAL-TIME PHONEPE MATCH CARD */}
