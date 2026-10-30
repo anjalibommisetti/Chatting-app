@@ -262,60 +262,95 @@ app.get('/api/auth/me', authenticate, (req, res) => {
 
 // POST /api/auth/forgot-password
 app.post('/api/auth/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ success: false, error: 'Email address is required.' });
+  const { email, identifier, phone } = req.body;
+  const target = (email || identifier || phone || '').trim();
+  if (!target) {
+    return res.status(400).json({ success: false, error: 'Please enter your mobile number or email.' });
   }
 
-  const user = db.data.users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+  const cleanPhone = target.replace(/[^0-9]/g, '');
+  const user = db.data.users.find(u => {
+    if (u.email && u.email.toLowerCase() === target.toLowerCase()) return true;
+    if (cleanPhone && cleanPhone.length >= 10 && u.phone === cleanPhone) return true;
+    if (target.includes('@vibechat.io') && u.phone === target.replace('@vibechat.io', '')) return true;
+    return false;
+  });
+
   if (!user) {
-    return res.status(404).json({ success: false, error: 'No account registered with this email address.' });
+    return res.status(404).json({ success: false, error: 'No account registered with this email or mobile number.' });
   }
 
   const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-  user.resetCode = resetCode;
-  user.resetCodeExpires = Date.now() + 1000 * 60 * 15; // 15 mins
-  db.save();
+  db.updateUser(user.id, {
+    resetCode,
+    resetCodeExpires: Date.now() + 1000 * 60 * 15 // 15 mins
+  });
 
-  try {
-    await sendOTPEmail(user.email, resetCode, user.nickname || user.name);
-  } catch (mailErr) {
-    console.error('Email send failed:', mailErr.message);
+  // Mask email for privacy (e.g. an***20@gmail.com)
+  let maskedEmail = user.email;
+  if (user.email && user.email.includes('@')) {
+    const [namePart, domain] = user.email.split('@');
+    maskedEmail = namePart.length > 3
+      ? `${namePart.slice(0, 2)}***${namePart.slice(-1)}@${domain}`
+      : `${namePart.slice(0, 1)}***@${domain}`;
   }
 
-  // In dev (no Gmail configured), return code in response so it can be shown
-  const devMode = !process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD;
+  let emailSent = false;
+  try {
+    if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+      await sendOTPEmail(user.email, resetCode, user.nickname || user.name);
+      emailSent = true;
+      console.log(`[Email] ✅ OTP sent to ${user.email}`);
+    } else {
+      console.log(`[Email Notice] Gmail credentials not set on Render. OTP for ${user.email} is: ${resetCode}`);
+    }
+  } catch (mailErr) {
+    console.error('[Email Error] Send failed:', mailErr.message);
+  }
+
   return res.json({
     success: true,
-    message: devMode ? 'OTP generated (email not configured — shown below for testing).' : `OTP sent to ${user.email}`,
-    ...(devMode ? { devResetCode: resetCode } : {})
+    userEmail: user.email,
+    message: emailSent
+      ? `OTP has been sent to ${maskedEmail}. Check your inbox & spam folder.`
+      : `OTP has been sent to ${maskedEmail}. Please enter the 6-digit code.`
   });
 });
 
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', (req, res) => {
-  const { email, resetCode, code, newPassword } = req.body;
-  const theCode = resetCode || code;
-  if (!email || !theCode || !newPassword) {
-    return res.status(400).json({ success: false, error: 'Email, reset code, and new password are required.' });
+  const { email, identifier, phone, resetCode, code, newPassword } = req.body;
+  const target = (email || identifier || phone || '').trim();
+  const theCode = (resetCode || code || '').trim();
+
+  if (!target || !theCode || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Identifier, reset code, and new password are required.' });
   }
   if (newPassword.length < 6) {
     return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
   }
 
-  const user = db.data.users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+  const cleanPhone = target.replace(/[^0-9]/g, '');
+  const user = db.data.users.find(u => {
+    if (u.email && u.email.toLowerCase() === target.toLowerCase()) return true;
+    if (cleanPhone && cleanPhone.length >= 10 && u.phone === cleanPhone) return true;
+    if (target.includes('@vibechat.io') && u.phone === target.replace('@vibechat.io', '')) return true;
+    return false;
+  });
+
   if (!user || user.resetCode !== theCode || Date.now() > (user.resetCodeExpires || 0)) {
-    return res.status(400).json({ success: false, error: 'Invalid or expired reset code.' });
+    return res.status(400).json({ success: false, error: 'Invalid or expired OTP code. Please try again.' });
   }
 
   const { hash, salt } = hashPassword(newPassword);
-  user.passwordHash = hash;
-  user.salt = salt;
-  user.resetCode = null;
-  user.resetCodeExpires = null;
-  db.save();
+  db.updateUser(user.id, {
+    passwordHash: hash,
+    salt,
+    resetCode: null,
+    resetCodeExpires: null
+  });
 
-  return res.json({ success: true, message: 'Password has been successfully reset. You can now log in.' });
+  return res.json({ success: true, message: 'Password has been successfully reset! You can now log in.' });
 });
 
 // ==============================================================================
@@ -990,17 +1025,17 @@ io.on('connection', (socket) => {
 // Start the Server
 server.listen(PORT, async () => {
   console.log(`\n======================================================`);
-  console.log(`🚀 VibeConnect Backend API & Real-Time Engine Active!`);
+  console.log(`🚀 VibeChat Backend API & Real-Time Engine Active!`);
   console.log(`📡 URL: http://localhost:${PORT}`);
-  console.log(`🗄️ Database: Atomic ACID File Storage in /data/db.json`);
+  console.log(`🗄️ Database: Supabase Cloud Database (vc_users, vc_messages, ...)`);
   console.log(`📁 File Attachments: /uploads`);
-  console.log(`☁️ Supabase Cloud Sync: Connected & Active`);
+  console.log(`☁️ Supabase: Connected & Active`);
   console.log(`======================================================\n`);
 
   try {
-    await db.syncFromSupabase();
+    await db.init();
   } catch (err) {
-    console.warn('[Server] Supabase startup sync note:', err.message);
+    console.warn('[Server] Supabase startup note:', err.message);
   }
 });
 

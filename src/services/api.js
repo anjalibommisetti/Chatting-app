@@ -146,17 +146,17 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
-  async forgotPassword(email) {
+  async forgotPassword(identifier) {
     return this.request('/auth/forgot-password', {
       method: 'POST',
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ identifier, email: identifier })
     });
   }
 
-  async resetPassword({ email, resetCode, newPassword }) {
+  async resetPassword({ identifier, email, resetCode, newPassword }) {
     return this.request('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ email, resetCode, newPassword })
+      body: JSON.stringify({ identifier: identifier || email, email: email || identifier, resetCode, newPassword })
     });
   }
 

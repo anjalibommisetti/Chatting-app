@@ -121,20 +121,12 @@ export default function WelcomeScreen({ onQuickLogin }) {
     setForgotLoading(true);
     try {
       const { api } = await import('../../services/api');
-      // Try phone or email: backend accepts email, so we try email format
-      const isEmail = forgotIdentifier.includes('@');
-      const payload = isEmail
-        ? forgotIdentifier.trim()
-        : `${forgotIdentifier.trim().replace(/[^0-9]/g, '')}@vibechat.io`;
-      const res = await api.forgotPassword(payload);
+      const res = await api.forgotPassword(forgotIdentifier.trim());
       setForgotStep(2);
-      if (res.devResetCode || res.resetCode || res.code) {
-        const code = res.devResetCode || res.resetCode || res.code;
-        setForgotResetCode(code);
-        setForgotInfo(`✅ Reset code generated: ${code} (auto-filled for your convenience)`);
-      }
+      setForgotResetCode(''); // Keep empty — user enters OTP received in email
+      setForgotInfo(res.message || 'OTP has been sent to your registered email! Please check your inbox & spam folder.');
     } catch (err) {
-      setForgotError(err.message || 'Could not generate reset code. Check your mobile number.');
+      setForgotError(err.message || 'Could not find account. Check your mobile number or email.');
     } finally {
       setForgotLoading(false);
     }
@@ -143,21 +135,25 @@ export default function WelcomeScreen({ onQuickLogin }) {
   const handleForgotReset = async (e) => {
     e.preventDefault();
     setForgotError('');
-    if (!forgotResetCode.trim() || forgotNewPassword.length < 6) {
-      setForgotError('Enter the reset code and a password of at least 6 characters.');
+    if (!forgotResetCode.trim() || forgotResetCode.trim().length < 6) {
+      setForgotError('Please enter the 6-digit OTP code sent to your email.');
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      setForgotError('Password must be at least 6 characters.');
       return;
     }
     setForgotLoading(true);
     try {
       const { api } = await import('../../services/api');
-      const isEmail = forgotIdentifier.includes('@');
-      const email = isEmail
-        ? forgotIdentifier.trim()
-        : `${forgotIdentifier.trim().replace(/[^0-9]/g, '')}@vibechat.io`;
-      await api.resetPassword({ email, resetCode: forgotResetCode.trim(), newPassword: forgotNewPassword });
+      await api.resetPassword({
+        identifier: forgotIdentifier.trim(),
+        resetCode: forgotResetCode.trim(),
+        newPassword: forgotNewPassword
+      });
       setForgotStep(3);
     } catch (err) {
-      setForgotError(err.message || 'Password reset failed. Invalid or expired code.');
+      setForgotError(err.message || 'Password reset failed. Invalid or expired OTP code.');
     } finally {
       setForgotLoading(false);
     }
@@ -390,14 +386,17 @@ export default function WelcomeScreen({ onQuickLogin }) {
             {forgotStep === 2 && (
               <form onSubmit={handleForgotReset} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Reset Code (6 digits)</label>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Enter 6-Digit OTP from Email</label>
                   <input
                     type="text"
                     value={forgotResetCode}
-                    onChange={e => setForgotResetCode(e.target.value)}
-                    placeholder="e.g. 123456"
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:border-purple-500"
+                    onChange={e => setForgotResetCode(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="Enter 6-digit OTP code"
+                    maxLength={6}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm font-mono tracking-widest text-center focus:outline-none focus:border-purple-500"
+                    autoFocus
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">Check your inbox or spam folder for the code</p>
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-300 mb-1">New Password</label>
