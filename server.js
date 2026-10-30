@@ -9,7 +9,8 @@ import path from 'path';
 import cors from 'cors';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
-import { Server } from 'socket.io';\nimport fs from 'fs';
+import { Server } from 'socket.io';
+import fs from 'fs';
 import nodemailer from 'nodemailer';
 import { db, hashPassword, verifyPassword } from './server/db.js';
 
