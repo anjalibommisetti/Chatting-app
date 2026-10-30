@@ -9,9 +9,39 @@ import path from 'path';
 import cors from 'cors';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
-import { Server } from 'socket.io';
-import fs from 'fs';
+import { Server } from 'socket.io';\nimport fs from 'fs';
+import nodemailer from 'nodemailer';
 import { db, hashPassword, verifyPassword } from './server/db.js';
+
+// Email transporter (uses env vars set on Render)
+const emailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER || '',
+    pass: process.env.GMAIL_APP_PASSWORD || ''
+  }
+});
+
+async function sendOTPEmail(toEmail, otp, nickname) {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.log(`[DEV] OTP for ${toEmail}: ${otp}`);
+    return; // In dev, just log it
+  }
+  await emailTransporter.sendMail({
+    from: `"VibeChat" <${process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: 'VibeChat — Your Password Reset OTP',
+    html: `
+      <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:24px;background:#111726;color:#fff;border-radius:16px;">
+        <h2 style="color:#a855f7;">🔑 Password Reset OTP</h2>
+        <p>Hi <strong>${nickname || 'there'}</strong>,</p>
+        <p>Your OTP to reset your VibeChat password is:</p>
+        <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#a855f7;padding:16px;background:#1e1b4b;border-radius:12px;text-align:center;">${otp}</div>
+        <p style="color:#94a3b8;font-size:12px;margin-top:16px;">This OTP expires in 15 minutes. If you didn't request this, ignore this email.</p>
+      </div>
+    `
+  });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -121,21 +151,22 @@ function authenticate(req, res, next) {
 // POST /api/auth/register
 app.post('/api/auth/register', (req, res) => {
   try {
-    const { name, email, phone, phoneNumber, username, password, avatar, bio } = req.body;
+    const { name, email, phone, phoneNumber, nickname, username, password, avatar, bio } = req.body;
     const rawPhone = (phone || phoneNumber || '').trim();
     const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+    const displayName = (nickname || name || '').trim();
 
-    if (!name || (!email && !cleanPhone) || !password) {
-      return res.status(400).json({ success: false, error: 'Name, phone number or email, and password are required.' });
+    if (!displayName || !cleanPhone || !email || !password) {
+      return res.status(400).json({ success: false, error: 'Nickname, email, phone number, and password are required.' });
     }
     if (password.length < 6) {
       return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
     }
 
-    const effectiveEmail = (email && email.trim()) ? email.trim().toLowerCase() : (cleanPhone ? `${cleanPhone}@vibechat.io` : '');
+    const effectiveEmail = email.trim().toLowerCase();
 
     const existingEmail = db.data.users.find(u => u.email.toLowerCase() === effectiveEmail);
-    if (existingEmail && email) {
+    if (existingEmail) {
       return res.status(409).json({ success: false, error: 'An account with this email address already exists.' });
     }
 
@@ -145,20 +176,28 @@ app.post('/api/auth/register', (req, res) => {
         return uPhone === cleanPhone;
       });
       if (existingPhone) {
-        return res.status(409).json({ success: false, error: 'An account with this phone number already exists.' });
+        return res.status(409).json({ success: false, error: 'An account with this phone number already exists. Please sign in.' });
       }
     }
 
-    const cleanUsername = username ? username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') : (cleanPhone ? 'user_' + cleanPhone.slice(-4) : name.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''));
+    // Username = clean version of nickname (no phone digits appended)
+    let cleanUsername = displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+    if (!cleanUsername) cleanUsername = 'user';
+    // Check for username conflicts, append random 2-char suffix only if needed
+    const usernameExists = db.data.users.find(u => u.username === cleanUsername);
+    if (usernameExists) {
+      cleanUsername = cleanUsername + '_' + Math.random().toString(36).slice(2, 4);
+    }
 
     const newUser = db.createUser({
-      name: name.trim(),
+      name: displayName,
+      nickname: displayName,
       email: effectiveEmail,
-      phone: cleanPhone || '9' + Math.floor(100000000 + Math.random() * 900000000),
+      phone: cleanPhone,
       username: cleanUsername,
       password,
       avatar: avatar || '🦊',
-      bio: bio || 'Available for Chat & Calls 💬'
+      bio: bio || 'Hey there! I am using VibeChat ✨'
     });
 
     const token = db.createSession(newUser.id);
@@ -221,7 +260,7 @@ app.get('/api/auth/me', authenticate, (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-app.post('/api/auth/forgot-password', (req, res) => {
+app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ success: false, error: 'Email address is required.' });
@@ -237,12 +276,18 @@ app.post('/api/auth/forgot-password', (req, res) => {
   user.resetCodeExpires = Date.now() + 1000 * 60 * 15; // 15 mins
   db.save();
 
+  try {
+    await sendOTPEmail(user.email, resetCode, user.nickname || user.name);
+  } catch (mailErr) {
+    console.error('Email send failed:', mailErr.message);
+  }
+
+  // In dev (no Gmail configured), return code in response so it can be shown
+  const devMode = !process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD;
   return res.json({
     success: true,
-    message: 'Password reset code generated.',
-    code: resetCode,
-    resetCode: resetCode,
-    devResetCode: resetCode
+    message: devMode ? 'OTP generated (email not configured — shown below for testing).' : `OTP sent to ${user.email}`,
+    ...(devMode ? { devResetCode: resetCode } : {})
   });
 });
 
@@ -282,7 +327,7 @@ function handleUserSearch(req, res) {
   let users = db.data.users.map(u => db.sanitizeUser(u));
 
   if (query) {
-    users = users.filter(u => 
+    users = users.filter(u =>
       u.name.toLowerCase().includes(query) ||
       u.username.toLowerCase().includes(query) ||
       (u.nickname && u.nickname.toLowerCase().includes(query)) ||
@@ -327,7 +372,7 @@ app.put('/api/users/profile', authenticate, (req, res) => {
   const { name, nickname, bio, avatar, status } = req.body;
   const updated = db.updateUser(req.user.id, { name, nickname, bio, avatar, status });
   const sanitized = db.sanitizeUser(updated);
-  
+
   io.emit('user-status-changed', {
     userId: req.user.id,
     status: updated.status,
@@ -459,7 +504,7 @@ app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
 
   // Broadcast to socket room
   io.to('conv_' + conv.id).emit('receive-message', payloadMsg);
-  
+
   // Notify user personal rooms for real-time delivery and unread indicators
   conv.participantIds.forEach(pid => {
     if (pid !== req.user.id) {
@@ -793,7 +838,7 @@ io.on('connection', (socket) => {
 
       // Broadcast to active conversation room
       socket.to('conv_' + data.conversationId).emit('receive-message', newMsg);
-      
+
       // Also notify all participant personal user rooms in real-time
       if (conv && Array.isArray(conv.participantIds)) {
         conv.participantIds.forEach(pid => {
@@ -807,7 +852,7 @@ io.on('connection', (socket) => {
           }
         });
       }
-      
+
       if (callback) callback({ success: true, message: newMsg });
       socket.emit('message-sent', newMsg);
     } catch (err) {
@@ -927,7 +972,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (user) {
       activeSockets.delete(socket.id);
-      
+
       const hasOtherSockets = Array.from(activeSockets.values()).includes(user.id);
       if (!hasOtherSockets) {
         const lastSeen = 'Active ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

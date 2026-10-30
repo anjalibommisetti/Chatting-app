@@ -48,11 +48,13 @@ export default function WelcomeScreen({ onQuickLogin }) {
   const [forgotInfo, setForgotInfo] = useState('');
 
   // Signup form state
-  const [signupName, setSignupName] = useState('');
+  const [signupNickname, setSignupNickname] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signupAvatar, setSignupAvatar] = useState('🦊');
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState('');
@@ -165,28 +167,35 @@ export default function WelcomeScreen({ onQuickLogin }) {
     e.preventDefault();
     setSignupError('');
 
-    if (!signupName.trim() || !signupPassword) {
-      setSignupError('Please provide your name and a password.');
+    if (!signupNickname.trim()) {
+      setSignupError('Please enter your nickname.');
       return;
     }
-
+    if (!signupEmail.trim() || !signupEmail.includes('@')) {
+      setSignupError('Please enter a valid email address.');
+      return;
+    }
     const cleanPhone = signupPhone.replace(/[^0-9]/g, '');
-    if (!cleanPhone && !signupEmail.trim()) {
-      setSignupError('Please enter your 10-digit mobile number.');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setSignupError('Please enter a valid 10-digit mobile number.');
       return;
     }
-
-    if (signupPassword.length < 6) {
+    if (!signupPassword || signupPassword.length < 6) {
       setSignupError('Password must be at least 6 characters.');
+      return;
+    }
+    if (signupPassword !== signupConfirmPassword) {
+      setSignupError('Passwords do not match.');
       return;
     }
 
     setSignupLoading(true);
     try {
       await store.signUp({
-        name: signupName.trim(),
+        name: signupNickname.trim(),
+        nickname: signupNickname.trim(),
         phone: cleanPhone,
-        email: signupEmail.trim() || (cleanPhone ? `${cleanPhone}@vibechat.io` : ''),
+        email: signupEmail.trim(),
         password: signupPassword,
         avatar: signupAvatar
       });
@@ -361,18 +370,19 @@ export default function WelcomeScreen({ onQuickLogin }) {
             {forgotStep === 1 && (
               <form onSubmit={handleForgotRequest} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Mobile Number or Email</label>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Your Email Address</label>
                   <input
-                    type="text"
+                    type="email"
                     value={forgotIdentifier}
                     onChange={e => setForgotIdentifier(e.target.value)}
-                    placeholder="e.g. 9390064784"
+                    placeholder="e.g. anjali@gmail.com"
                     className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">OTP will be sent to this email address</p>
                 </div>
                 <button type="submit" disabled={forgotLoading} className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
                   {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Generate Reset Code
+                  Send OTP to Email
                 </button>
               </form>
             )}
@@ -455,16 +465,17 @@ export default function WelcomeScreen({ onQuickLogin }) {
               </div>
             </div>
 
+            {/* Nickname */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Full Name
+                Nickname
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input
                   type="text"
-                  value={signupName}
-                  onChange={(e) => setSignupName(e.target.value)}
+                  value={signupNickname}
+                  onChange={(e) => setSignupNickname(e.target.value)}
                   placeholder="e.g. Anjali"
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500 transition-colors"
                   required
@@ -472,6 +483,25 @@ export default function WelcomeScreen({ onQuickLogin }) {
               </div>
             </div>
 
+            {/* Email */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="e.g. anjali@gmail.com"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500 transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Mobile Number */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Mobile Number
@@ -482,14 +512,15 @@ export default function WelcomeScreen({ onQuickLogin }) {
                   type="tel"
                   value={signupPhone}
                   onChange={(e) => setSignupPhone(e.target.value)}
-                  placeholder="e.g. 9390064784 (10 digits)"
-                  maxLength={12}
+                  placeholder="10-digit number"
+                  maxLength={10}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:border-purple-500 transition-colors"
                   required
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Password
@@ -510,6 +541,31 @@ export default function WelcomeScreen({ onQuickLogin }) {
                   className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
                   {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={signupConfirmPassword}
+                  onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500 transition-colors"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
