@@ -321,10 +321,11 @@ export default function ChatList({
           filteredConversations.map((conv) => {
             const isGroup = conv.type === 'group';
             const group = isGroup ? groups.find(g => g.id === conv.groupId) : null;
-            const peerId = !isGroup ? conv.participantIds.find(id => id !== currentUser?.id) : null;
+            const peerId = !isGroup ? conv.participantIds?.find(id => id !== currentUser?.id) : null;
             const peer = !isGroup ? store.getUserById(peerId) : null;
 
-            const title = isGroup ? (group?.name || 'Group') : store.getDisplayName(peer);
+            const rawTitle = isGroup ? (group?.name || 'Group') : (peer ? store.getDisplayName(peer) : (conv.recipientName || (peerId ? peerId.replace(/^(user_|usr_phone_|usr_)/, '') : 'Friend')));
+            const title = rawTitle === 'Unknown' ? 'Friend' : rawTitle;
             const avatar = isGroup ? (group?.avatar || '👥') : (peer?.avatar || '👤');
             const isActive = activeConversationId === conv.id;
 

@@ -75,15 +75,28 @@ export default function ChatArea({
 
   const currentUser = store.currentUser;
   const conversation = store.conversations.find(c => c.id === conversationId);
-  const messages = store.messages.filter(m => m.conversationId === conversationId);
+  const rawMessages = store.messages.filter(m => m.conversationId === conversationId);
+  const seenMsgIds = new Set();
+  const messages = rawMessages.filter(m => {
+    if (seenMsgIds.has(m.id)) return false;
+    seenMsgIds.add(m.id);
+    return true;
+  });
 
   // Determine chat peer or group
   const isGroup = conversation?.type === 'group';
   const group = isGroup ? store.groups.find(g => g.id === conversation?.groupId) : null;
-  const peerId = !isGroup ? conversation?.participantIds.find(id => id !== currentUser?.id) : null;
+  const peerId = !isGroup ? conversation?.participantIds?.find(id => id !== currentUser?.id) : null;
   const peer = !isGroup ? store.getUserById(peerId) : null;
 
-  const title = isGroup ? (group?.name || 'Private Group') : store.getDisplayName(peer);
+  useEffect(() => {
+    if (peerId && !peer) {
+      store.fetchUserById(peerId);
+    }
+  }, [peerId, peer]);
+
+  const rawTitle = peer ? store.getDisplayName(peer) : (conversation?.recipientName || (peerId ? peerId.replace(/^(user_|usr_phone_|usr_)/, '') : 'Friend'));
+  const title = isGroup ? (group?.name || 'Private Group') : (rawTitle === 'Unknown' ? 'Friend' : rawTitle);
   const avatar = isGroup ? (group?.avatar || '👥') : (peer?.avatar || '👤');
 
   // Typing indicators

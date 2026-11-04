@@ -121,6 +121,23 @@ class StoreService {
   setupSocketListeners() {
     // 1. Receive incoming real-time message
     realtime.on('receive-message', (newMsg) => {
+      // Avoid duplicate insertion if message ID already exists
+      if (this.messages.some(m => m.id === newMsg.id)) return;
+
+      // If this is our own message arriving via socket, replace any pending optimistic placeholder
+      if (newMsg.senderId === this.currentUser?.id) {
+        const tempIdx = this.messages.findIndex(m => 
+          m.id.startsWith('msg_temp_') && 
+          m.conversationId === newMsg.conversationId && 
+          m.text === newMsg.text
+        );
+        if (tempIdx !== -1) {
+          this.messages[tempIdx] = newMsg;
+          this.notify();
+          return;
+        }
+      }
+
       const exists = this.messages.some(m => m.id === newMsg.id);
       if (!exists) {
         this.messages.push(newMsg);
@@ -726,9 +743,18 @@ class StoreService {
 
       // Replace temp message with server message
       if (res && res.message) {
-        const idx = this.messages.findIndex(m => m.id === tempId);
-        if (idx !== -1) {
-          this.messages[idx] = res.message;
+        const tempIdx = this.messages.findIndex(m => m.id === tempId);
+        const alreadyExists = this.messages.some(m => m.id === res.message.id);
+
+        if (alreadyExists) {
+          // If socket already added this message, simply remove the temp placeholder
+          if (tempIdx !== -1) {
+            this.messages.splice(tempIdx, 1);
+          }
+        } else if (tempIdx !== -1) {
+          this.messages[tempIdx] = res.message;
+        } else {
+          this.messages.push(res.message);
         }
         this.notify();
       }
@@ -961,15 +987,52 @@ class StoreService {
   }
 
   getDisplayName(user) {
-    if (!user) return 'Unknown';
-    if (this.friendNicknames[user.id]) {
+    if (!user) return 'Friend';
+    if (typeof user === 'string') {
+      const found = this.getUserById(user);
+      if (found) return this.getDisplayName(found);
+      const clean = user.replace(/^(user_|usr_phone_|usr_)/, '');
+      return clean.length >= 10 ? clean : 'Friend';
+    }
+    if (this.friendNicknames && this.friendNicknames[user.id]) {
       return this.friendNicknames[user.id];
     }
-    return user.nickname || user.name || user.username || user.phone || 'User';
+    return user.nickname || user.name || user.username || user.phone || 'Friend';
   }
 
   getUserById(id) {
+    if (!id) return null;
     return this.users.find(u => u.id === id) || SEED_USERS.find(u => u.id === id) || null;
+  }
+
+  async fetchUserById(userId) {
+    if (!userId || this._fetchingUsers?.has(userId)) return null;
+    if (!this._fetchingUsers) this._fetchingUsers = new Set();
+    this._fetchingUsers.add(userId);
+
+    try {
+      const cleanPhone = userId.replace(/[^0-9]/g, '');
+      if (cleanPhone.length >= 10) {
+        const found = await this.searchUserByPhoneOnline(cleanPhone);
+        if (found) {
+          this._fetchingUsers.delete(userId);
+          return found;
+        }
+      }
+
+      const res = await api.searchUsers();
+      if (res && res.users) {
+        this.users = res.users.filter(u => !u.id.startsWith('usr_phone_'));
+        this.saveStorage('vibe_users', this.users);
+        this.notify();
+        const found = this.users.find(u => u.id === userId);
+        this._fetchingUsers.delete(userId);
+        return found;
+      }
+    } catch (e) {}
+
+    this._fetchingUsers.delete(userId);
+    return null;
   }
 
   togglePin(conversationId) {
