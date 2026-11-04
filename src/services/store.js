@@ -394,11 +394,6 @@ class StoreService {
     }
     return null;
   }
-        }
-      } catch (err) {}
-    }
-    return null;
-  }
 
   async signUp({ name, email, phone, username, password, avatar, bio }) {
     try {
