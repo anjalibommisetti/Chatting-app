@@ -113,6 +113,7 @@ class SupabaseDatabase {
       users: [],
       sessions: {},      // token -> { userId, expiresAt }
       conversations: [],
+      messages: [],
       groups: [],
       chatRequests: [],
       callLogs: []
@@ -126,8 +127,9 @@ class SupabaseDatabase {
       await this._loadUsers();
       await this._loadSessions();
       await this._loadConversations();
+      await this._loadMessages();
       await this._loadGroups();
-      console.log(`[DB] ✅ Loaded from Supabase: ${this.data.users.length} users, ${this.data.conversations.length} convs, ${Object.keys(this.data.sessions).length} sessions`);
+      console.log(`[DB] ✅ Loaded from Supabase: ${this.data.users.length} users, ${this.data.conversations.length} convs, ${this.data.messages.length} messages, ${Object.keys(this.data.sessions).length} sessions`);
     } catch (err) {
       console.error('[DB] ❌ Supabase init error:', err.message);
     }
@@ -152,6 +154,12 @@ class SupabaseDatabase {
     const { data, error } = await supabase.from('vc_conversations').select('*').order('last_message_time', { ascending: false });
     if (error) { console.warn('[DB] Could not load conversations:', error.message); return; }
     this.data.conversations = (data || []).map(convFromRow);
+  }
+
+  async _loadMessages() {
+    const { data, error } = await supabase.from('vc_messages').select('*').order('timestamp', { ascending: true }).limit(500);
+    if (error) { console.warn('[DB] Could not load messages:', error.message); return; }
+    this.data.messages = (data || []).map(msgFromRow);
   }
 
   async _loadGroups() {
@@ -373,6 +381,15 @@ class SupabaseDatabase {
 
   // ─── Messages ─────────────────────────────────────────────────────────────
   async getMessagesByConversation(convId, limit = 100) {
+    if (!this.data.messages) this.data.messages = [];
+    let localMsgs = this.data.messages
+      .filter(m => m.conversationId === convId)
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    if (localMsgs.length > 0) {
+      return localMsgs.slice(-limit);
+    }
+
     const { data, error } = await supabase
       .from('vc_messages')
       .select('*')
@@ -380,10 +397,20 @@ class SupabaseDatabase {
       .order('timestamp', { ascending: true })
       .limit(limit);
     if (error) { console.warn('[DB] getMessages:', error.message); return []; }
-    return (data || []).map(msgFromRow);
+    const fetched = (data || []).map(msgFromRow);
+    fetched.forEach(m => {
+      if (!this.data.messages.some(existing => existing.id === m.id)) {
+        this.data.messages.push(m);
+      }
+    });
+    return fetched;
   }
 
   async getMessageById(messageId) {
+    if (this.data.messages) {
+      const found = this.data.messages.find(m => m.id === messageId);
+      if (found) return found;
+    }
     const { data, error } = await supabase.from('vc_messages').select('*').eq('id', messageId).single();
     if (error) return null;
     return msgFromRow(data);
@@ -411,6 +438,9 @@ class SupabaseDatabase {
       timestamp: Date.now(),
       readBy: [senderId]
     };
+
+    if (!this.data.messages) this.data.messages = [];
+    this.data.messages.push(newMsg);
 
     // Update conversation preview in memory
     let preview = newMsg.text;

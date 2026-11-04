@@ -482,8 +482,29 @@ app.post('/api/conversations', authenticate, (req, res) => {
 });
 
 // GET /api/conversations/:id/messages
-app.get('/api/conversations/:id/messages', authenticate, (req, res) => {
-  const conv = db.getConversationById(req.params.id);
+app.get('/api/conversations/:id/messages', authenticate, async (req, res) => {
+  let conv = db.getConversationById(req.params.id);
+  if (!conv) {
+    try {
+      const { data: dbConv } = await supabase.from('vc_conversations').select('*').eq('id', req.params.id).single();
+      if (dbConv) {
+        conv = {
+          id: dbConv.id,
+          type: dbConv.type || 'direct',
+          participantIds: dbConv.participant_ids || [],
+          groupId: dbConv.group_id || null,
+          isPinned: dbConv.is_pinned || false,
+          isMuted: dbConv.is_muted || false,
+          isArchived: dbConv.is_archived || false,
+          unreadCounts: dbConv.unread_counts || {},
+          lastMessagePreview: dbConv.last_message_preview || '',
+          lastMessageTime: dbConv.last_message_time || Date.now(),
+          createdAt: dbConv.created_at || Date.now()
+        };
+        db.data.conversations.push(conv);
+      }
+    } catch (e) {}
+  }
   if (!conv) return res.status(404).json({ success: false, error: 'Conversation not found' });
 
   if (!conv.participantIds.includes(req.user.id)) {
@@ -491,10 +512,10 @@ app.get('/api/conversations/:id/messages', authenticate, (req, res) => {
   }
 
   const limit = parseInt(req.query.limit, 10) || 100;
-  const messages = db.getMessagesByConversation(conv.id, limit);
+  const messages = await db.getMessagesByConversation(conv.id, limit);
 
   // Auto-mark read
-  db.markMessagesRead(conv.id, req.user.id);
+  await db.markMessagesRead(conv.id, req.user.id);
 
   // Support array format while attaching metadata
   const responseData = Object.assign([...messages], { success: true, messages });
@@ -502,19 +523,40 @@ app.get('/api/conversations/:id/messages', authenticate, (req, res) => {
 });
 
 // POST /api/conversations/:id/read
-app.post('/api/conversations/:id/read', authenticate, (req, res) => {
+app.post('/api/conversations/:id/read', authenticate, async (req, res) => {
   const conv = db.getConversationById(req.params.id);
   if (!conv) return res.status(404).json({ success: false, error: 'Conversation not found' });
 
-  db.markMessagesRead(conv.id, req.user.id);
+  await db.markMessagesRead(conv.id, req.user.id);
   io.to('conv_' + conv.id).emit('messages-read', { conversationId: conv.id, userId: req.user.id });
   return res.json({ success: true, message: 'Messages marked as read' });
 });
 
 // POST /api/conversations/:id/messages
-app.post('/api/conversations/:id/messages', authenticate, (req, res) => {
+app.post('/api/conversations/:id/messages', authenticate, async (req, res) => {
   const { text, attachment, replyToId, replyTo, isViewOnce, isGif } = req.body;
-  const conv = db.getConversationById(req.params.id);
+  let conv = db.getConversationById(req.params.id);
+  if (!conv) {
+    try {
+      const { data: dbConv } = await supabase.from('vc_conversations').select('*').eq('id', req.params.id).single();
+      if (dbConv) {
+        conv = {
+          id: dbConv.id,
+          type: dbConv.type || 'direct',
+          participantIds: dbConv.participant_ids || [],
+          groupId: dbConv.group_id || null,
+          isPinned: dbConv.is_pinned || false,
+          isMuted: dbConv.is_muted || false,
+          isArchived: dbConv.is_archived || false,
+          unreadCounts: dbConv.unread_counts || {},
+          lastMessagePreview: dbConv.last_message_preview || '',
+          lastMessageTime: dbConv.last_message_time || Date.now(),
+          createdAt: dbConv.created_at || Date.now()
+        };
+        db.data.conversations.push(conv);
+      }
+    } catch (e) {}
+  }
   if (!conv) return res.status(404).json({ success: false, error: 'Conversation not found' });
 
   if (!conv.participantIds.includes(req.user.id)) {

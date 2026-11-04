@@ -296,10 +296,14 @@ export default function NewChatByPhoneModal({ isOpen, onClose, onChatCreated, on
 
                   <button
                     onClick={async () => {
-                      const conv = await store.startChatWithPhoneNumber(cleanPhone);
-                      if (conv) {
-                        onChatCreated(conv.id);
-                        onClose();
+                      try {
+                        const conv = await store.startChatWithPhoneNumber(cleanPhone);
+                        if (conv) {
+                          onChatCreated(conv.id);
+                          onClose();
+                        }
+                      } catch (err) {
+                        setError(err.message || 'Could not start chat with this number.');
                       }
                     }}
                     className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-purple-600/30 active:scale-95"

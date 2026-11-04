@@ -327,10 +327,13 @@ class StoreService {
       ]);
 
       if (convRes.conversations) {
-        this.conversations = convRes.conversations;
+        this.conversations = convRes.conversations.filter(c => 
+          !c.participantIds?.some(pid => pid.startsWith('usr_phone_'))
+        );
       }
       if (usersRes.users && usersRes.users.length > 0) {
-        this.users = usersRes.users;
+        this.users = usersRes.users.filter(u => !u.id.startsWith('usr_phone_'));
+        this.saveStorage('vibe_users', this.users);
       }
       if (groupsRes.groups) {
         this.groups = groupsRes.groups;
@@ -347,7 +350,7 @@ class StoreService {
     const clean = phoneQuery.replace(/[^0-9]/g, '');
     if (!clean) return null;
 
-    const allUsers = [...(this.users || []), ...SEED_USERS];
+    const allUsers = [...(this.users || []).filter(u => !u.id.startsWith('usr_phone_')), ...SEED_USERS];
     return allUsers.find(u => {
       const p = (u.phone || '').replace(/[^0-9]/g, '');
       return p && (p === clean || p.endsWith(clean) || clean.endsWith(p));
@@ -359,13 +362,15 @@ class StoreService {
     const clean = phoneQuery.replace(/[^0-9]/g, '');
     if (clean.length < 5) return null;
 
-    // Check local store first
+    // Check local store first for real user
     const local = this.findUserByPhone(clean);
-    if (local) return local;
+    if (local && !local.id.startsWith('usr_phone_')) return local;
 
     try {
       const res = await api.getUserByPhone(clean);
       if (res && res.user) {
+        // Clean out any placeholder
+        this.users = (this.users || []).filter(u => u.phone !== clean || !u.id.startsWith('usr_phone_'));
         if (!this.users.some(u => u.id === res.user.id)) {
           this.users.push(res.user);
           this.saveStorage('vibe_users', this.users);
@@ -377,7 +382,18 @@ class StoreService {
         const res = await api.searchUsers(clean);
         const usersList = res.users || (Array.isArray(res) ? res : []);
         if (usersList.length > 0) {
-          return usersList[0];
+          const matched = usersList[0];
+          this.users = (this.users || []).filter(u => u.phone !== clean || !u.id.startsWith('usr_phone_'));
+          if (!this.users.some(u => u.id === matched.id)) {
+            this.users.push(matched);
+            this.saveStorage('vibe_users', this.users);
+          }
+          return matched;
+        }
+      } catch (err) {}
+    }
+    return null;
+  }
         }
       } catch (err) {}
     }
@@ -722,10 +738,10 @@ class StoreService {
         this.notify();
       }
     } catch (err) {
-      console.warn('[Store] Send message network note:', err.message);
+      console.error('[Store] Send message error:', err.message);
       const msg = this.messages.find(m => m.id === tempId);
       if (msg) {
-        msg.status = 'delivered';
+        msg.status = 'error';
         this.notify();
       }
     }
@@ -838,25 +854,13 @@ class StoreService {
         const res = await api.startConversation(targetUserId);
         if (res && res.conversation) {
           conv = res.conversation;
-          this.conversations.unshift(conv);
+          if (!this.conversations.some(c => c.id === conv.id)) {
+            this.conversations.unshift(conv);
+          }
           this.notify();
         }
       } catch (e) {
-        // Fallback local conversation
-        conv = {
-          id: 'conv_' + Date.now() + '_' + targetUserId,
-          type: 'direct',
-          participantIds: [this.currentUser.id, targetUserId],
-          groupId: null,
-          isPinned: false,
-          isMuted: false,
-          isArchived: false,
-          unreadCount: 0,
-          lastMessagePreview: 'Started chat',
-          lastMessageTime: Date.now()
-        };
-        this.conversations.unshift(conv);
-        this.notify();
+        console.error('[Store] Failed starting conversation on server:', e.message);
       }
     }
 
@@ -868,34 +872,22 @@ class StoreService {
     const clean = String(phoneNumber).replace(/[^0-9]/g, '');
     if (!clean) return null;
 
-    // 1. Check if user already exists in store or online
-    let user = this.findUserByPhone(clean);
-    if (!user && clean.length >= 10) {
+    // 1. Search online database first
+    let user = null;
+    if (clean.length >= 10) {
       try {
         user = await this.searchUserByPhoneOnline(clean);
       } catch (e) {}
     }
-
-    // 2. If user doesn't exist yet, create contact placeholder
     if (!user) {
-      user = {
-        id: 'usr_phone_' + clean,
-        name: `+91 ${clean}`,
-        nickname: `User ${clean.slice(-4)}`,
-        phone: clean,
-        username: `user_${clean.slice(-4)}`,
-        avatar: '👤',
-        bio: 'Phone Contact',
-        status: 'offline',
-        lastSeen: 'Available'
-      };
-      if (!this.users.some(u => u.id === user.id)) {
-        this.users.push(user);
-        this.saveStorage('vibe_users', this.users);
-      }
+      user = this.findUserByPhone(clean);
     }
 
-    // 3. Open or create conversation
+    if (!user || user.id.startsWith('usr_phone_')) {
+      throw new Error(`No registered user found with mobile number +91 ${clean}. Please verify the number.`);
+    }
+
+    // 2. Open or create conversation with the REAL registered user
     return await this.getDirectConversation(user.id);
   }
 
