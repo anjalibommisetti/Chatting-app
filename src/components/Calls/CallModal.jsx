@@ -139,13 +139,26 @@ export default function CallModal() {
   // ---------------------------------------------------------------------------
   // 3. FULL-SCREEN ACTIVE CALL STAGE (UP TO 5 PARTICIPANTS)
   // ---------------------------------------------------------------------------
+  const otherPersonId = isGroup 
+    ? null 
+    : (activeCall?.callerId === store.currentUser?.id ? activeCall?.targetId : (activeCall?.callerId || activeCall?.targetId));
+
+  const otherPerson = otherPersonId ? store.getUserById(otherPersonId) : null;
+  const otherPersonName = isGroup 
+    ? (activeCall?.targetName || 'Group Call') 
+    : (otherPerson ? store.getDisplayName(otherPerson) : (activeCall?.callerName || activeCall?.targetName || 'Friend'));
+
+  const otherPersonAvatar = isGroup
+    ? (activeCall?.targetAvatar || '📞')
+    : (otherPerson?.avatar || activeCall?.callerAvatar || activeCall?.targetAvatar || '👤');
+
   const participantIds = isGroup 
     ? (store.groups.find(g => g.id === activeCall?.targetId)?.members || []) 
-    : [activeCall?.targetId];
+    : [otherPersonId].filter(Boolean);
 
   const remoteParticipants = participantIds
     .filter(id => id !== store.currentUser?.id)
-    .map(id => store.getUserById(id))
+    .map(id => store.getUserById(id) || { id, name: otherPersonName, avatar: otherPersonAvatar })
     .filter(Boolean);
 
   return (
@@ -154,11 +167,11 @@ export default function CallModal() {
       <header className="h-16 px-6 bg-black/40 backdrop-blur-md border-b border-white/5 flex items-center justify-between z-30 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-            {activeCall?.targetAvatar || '📞'}
+            {otherPersonAvatar}
           </div>
           <div>
             <h4 className="font-heading font-bold text-sm text-white flex items-center gap-2">
-              {activeCall?.targetName}
+              {otherPersonName}
               {isGroup && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
                   {remoteParticipants.length + 1}/5 Members

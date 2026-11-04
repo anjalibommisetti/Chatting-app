@@ -40,6 +40,21 @@ class CallingService {
     this.setupSocketSignaling();
   }
 
+  _closeNotification() {
+    if (this.activeNotification) {
+      try {
+        if (typeof this.activeNotification.close === 'function') {
+          this.activeNotification.close();
+        } else if (typeof this.activeNotification.then === 'function') {
+          this.activeNotification.then(n => {
+            if (n && typeof n.close === 'function') n.close();
+          }).catch(() => {});
+        }
+      } catch (e) {}
+      this.activeNotification = null;
+    }
+  }
+
   setupSocketSignaling() {
     realtime.on('incoming-call', (payload) => {
       if (this.status === CALL_STATUS.IDLE && store.currentUser) {
@@ -359,30 +374,41 @@ class CallingService {
 
   async acceptCall() {
     if (this.ringTimeout) clearTimeout(this.ringTimeout);
-    if (this.activeNotification) {
-      this.activeNotification.close();
-      this.activeNotification = null;
-    }
-    sound.stopIncomingRing();
-    sound.stopOutgoingRing();
-    sound.playCallConnected();
+    this._closeNotification();
+    try {
+      sound.stopIncomingRing();
+      sound.stopOutgoingRing();
+      sound.playCallConnected();
+    } catch (e) {}
 
-    await this.getLocalMedia(this.activeCall?.type || 'video');
-
+    // Immediately enter connected state so UI transitions instantly
     this.status = CALL_STATUS.CONNECTED;
     this.callNotice = null;
     this.startDurationTimer();
+    this.notify();
+
+    try {
+      await this.getLocalMedia(this.activeCall?.type || 'video');
+    } catch (e) {
+      console.warn('getLocalMedia notice:', e);
+    }
 
     // Socket.IO signaling acceptance
-    realtime.emit('accept-call', {
-      callerId: this.activeCall?.callerId,
-      targetId: this.activeCall?.targetId
-    });
+    try {
+      realtime.emit('accept-call', {
+        callerId: this.activeCall?.callerId,
+        targetId: this.activeCall?.targetId
+      });
+    } catch (e) {}
 
     if (this.activeCall) {
+      const otherId = (this.activeCall.callerId === store.currentUser?.id) 
+        ? this.activeCall.targetId 
+        : (this.activeCall.callerId || this.activeCall.targetId);
+
       const participantIds = this.activeCall.isGroup ? 
         (store.groups.find(g => g.id === this.activeCall.targetId)?.members || []) :
-        [this.activeCall.targetId];
+        [otherId].filter(Boolean);
 
       participantIds.forEach(id => {
         if (id !== store.currentUser?.id && !this.remoteStreams.has(id)) {
@@ -393,7 +419,9 @@ class CallingService {
     }
 
     if (this.signalingChannel) {
-      this.signalingChannel.postMessage({ type: 'CALL_ACCEPTED' });
+      try {
+        this.signalingChannel.postMessage({ type: 'CALL_ACCEPTED' });
+      } catch (e) {}
     }
 
     this.notify();
@@ -401,31 +429,40 @@ class CallingService {
 
   declineCall() {
     if (this.ringTimeout) clearTimeout(this.ringTimeout);
-    if (this.activeNotification) {
-      this.activeNotification.close();
-      this.activeNotification = null;
-    }
-    sound.stopIncomingRing();
-    sound.stopOutgoingRing();
-    sound.playCallEnded();
+    this._closeNotification();
+    try {
+      sound.stopIncomingRing();
+      sound.stopOutgoingRing();
+      sound.playCallEnded();
+    } catch (e) {}
 
     if (this.activeCall) {
-      store.logCall({
-        peerId: this.activeCall.isGroup ? null : this.activeCall.targetId,
-        groupId: this.activeCall.isGroup ? this.activeCall.targetId : null,
-        callType: this.activeCall.type,
-        status: 'declined',
-        duration: 0
-      });
+      const otherId = (this.activeCall.callerId === store.currentUser?.id) 
+        ? this.activeCall.targetId 
+        : (this.activeCall.callerId || this.activeCall.targetId);
 
-      realtime.emit('reject-call', {
-        callerId: this.activeCall.callerId,
-        reason: 'declined'
-      });
+      try {
+        store.logCall({
+          peerId: this.activeCall.isGroup ? null : otherId,
+          groupId: this.activeCall.isGroup ? this.activeCall.targetId : null,
+          callType: this.activeCall.type,
+          status: 'declined',
+          duration: 0
+        });
+      } catch (e) {}
+
+      try {
+        realtime.emit('reject-call', {
+          callerId: this.activeCall.callerId,
+          reason: 'declined'
+        });
+      } catch (e) {}
     }
 
     if (this.signalingChannel) {
-      this.signalingChannel.postMessage({ type: 'CALL_DECLINED' });
+      try {
+        this.signalingChannel.postMessage({ type: 'CALL_DECLINED' });
+      } catch (e) {}
     }
 
     this.status = CALL_STATUS.IDLE;
@@ -438,37 +475,47 @@ class CallingService {
 
   endCall(notifyPeers = true) {
     if (this.ringTimeout) clearTimeout(this.ringTimeout);
-    if (this.activeNotification) {
-      this.activeNotification.close();
-      this.activeNotification = null;
-    }
-    sound.stopIncomingRing();
-    sound.stopOutgoingRing();
-    sound.playCallEnded();
+    this._closeNotification();
+    try {
+      sound.stopIncomingRing();
+      sound.stopOutgoingRing();
+      sound.playCallEnded();
+    } catch (e) {}
 
     if (this.activeCall) {
-      store.logCall({
-        peerId: this.activeCall.isGroup ? null : this.activeCall.targetId,
-        groupId: this.activeCall.isGroup ? this.activeCall.targetId : null,
-        callType: this.activeCall.type,
-        status: this.callDuration > 0 ? 'completed' : 'missed',
-        duration: this.callDuration
-      });
+      const otherId = (this.activeCall.callerId === store.currentUser?.id) 
+        ? this.activeCall.targetId 
+        : (this.activeCall.callerId || this.activeCall.targetId);
+
+      try {
+        store.logCall({
+          peerId: this.activeCall.isGroup ? null : otherId,
+          groupId: this.activeCall.isGroup ? this.activeCall.targetId : null,
+          callType: this.activeCall.type,
+          status: this.callDuration > 0 ? 'completed' : 'missed',
+          duration: this.callDuration
+        });
+      } catch (e) {}
 
       if (notifyPeers) {
-        realtime.emit('end-call', {
-          targetId: this.activeCall.targetId,
-          isGroup: this.activeCall.isGroup
-        });
+        try {
+          realtime.emit('end-call', {
+            targetId: this.activeCall.targetId,
+            isGroup: this.activeCall.isGroup
+          });
+        } catch (e) {}
       }
     }
 
     if (notifyPeers && this.signalingChannel) {
-      this.signalingChannel.postMessage({ type: 'CALL_ENDED' });
+      try {
+        this.signalingChannel.postMessage({ type: 'CALL_ENDED' });
+      } catch (e) {}
     }
 
     this.status = CALL_STATUS.IDLE;
     this.activeCall = null;
+    this.callNotice = null;
     this.stopDurationTimer();
     this.stopLocalMedia();
     this.remoteStreams.clear();
