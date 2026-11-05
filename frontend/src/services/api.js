@@ -86,33 +86,50 @@ class ApiClient {
       headers
     };
 
-    try {
-      const response = await fetch(url, config);
-      const contentType = response.headers.get('content-type') || '';
-      
-      let data;
-      if (contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          if (!response.ok) {
-            throw new Error(`Server returned error (${response.status}). Please make sure the backend server is running.`);
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        const response = await fetch(url, config);
+        const contentType = response.headers.get('content-type') || '';
+        
+        let data;
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            if (!response.ok) {
+              throw new Error(`Server returned error (${response.status}). Please make sure the backend server is running.`);
+            }
+            throw new Error('Server returned unexpected non-JSON response.');
           }
-          throw new Error('Server returned unexpected non-JSON response.');
         }
-      }
 
-      if (!response.ok || data.success === false) {
-        throw new Error(data.error || 'Request failed');
-      }
+        if (!response.ok || data.success === false) {
+          throw new Error(data.error || 'Request failed');
+        }
 
-      return data;
-    } catch (err) {
-      console.warn(`[API] Error on ${endpoint}:`, err.message);
-      throw err;
+        return data;
+      } catch (err) {
+        const isNetworkErr = err.message === 'Failed to fetch' || err.name === 'TypeError' || err.message?.includes('NetworkError');
+        if (isNetworkErr && attempts < maxAttempts) {
+          console.log(`[API] Server waking up from sleep... retrying attempt ${attempts + 1}/${maxAttempts}`);
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+
+        if (isNetworkErr) {
+          throw new Error('Server is waking up from sleep (free tier). Please wait a few seconds and try again!');
+        }
+
+        console.warn(`[API] Error on ${endpoint}:`, err.message);
+        throw err;
+      }
     }
   }
 
