@@ -1,18 +1,25 @@
 // ==============================================================================
-// VibeConnect — Service Worker for Mobile Chrome & Web Push Notifications
-// Powers system notifications in the Android notification bar from Chrome
+// VibeConnect — Service Worker with Auto-Update & Push Notifications
 // ==============================================================================
 
-const CACHE_NAME = 'vibeconnect-sw-v1';
+const SW_VERSION = 'vibe-v1.0.3';
 
 self.addEventListener('install', (event) => {
-  console.log('⚡ [SW] VibeConnect Service Worker installed.');
+  console.log('⚡ [SW] VibeConnect Service Worker installed:', SW_VERSION);
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('⚡ [SW] VibeConnect Service Worker activated.');
-  event.waitUntil(self.clients.claim());
+  console.log('⚡ [SW] VibeConnect Service Worker activated:', SW_VERSION);
+  event.waitUntil(
+    self.clients.claim().then(() => {
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SW_UPDATED', version: SW_VERSION });
+        });
+      });
+    })
+  );
 });
 
 // Handle incoming Web Push message (from server)
@@ -69,10 +76,12 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Listen for message from main thread to trigger notification
+// Listen for message from main thread to trigger notification or check version
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, options } = event.data;
     self.registration.showNotification(title, options);
+  } else if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });

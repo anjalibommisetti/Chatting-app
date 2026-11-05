@@ -52,6 +52,7 @@ export default function SettingsView({ onOpenQR }) {
   const [newKeyInput, setNewKeyInput] = useState('');
   const [confirmKeyInput, setConfirmKeyInput] = useState('');
   const [keyError, setKeyError] = useState('');
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const restoreFileRef = useRef(null);
 
   const blockedUsers = (currentUser?.blockedUserIds || []).map(id => store.getUserById(id)).filter(Boolean);
@@ -60,6 +61,27 @@ export default function SettingsView({ onOpenQR }) {
     setFeedbackMessage(msg);
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 2500);
+  };
+
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          if (reg.waiting) {
+            showToast('New update found! Reloading app...');
+            setTimeout(() => window.location.reload(true), 1200);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+    setTimeout(() => {
+      showToast('Your VibeChat mobile app is up to date! (v1.0.3) ✅');
+      setIsCheckingUpdate(false);
+    }, 800);
   };
 
   const handleChangeKey = (e) => {
@@ -398,6 +420,15 @@ export default function SettingsView({ onOpenQR }) {
             >
               <QrCode className="w-4 h-4" />
               <span>Open Mobile App QR & Scanner</span>
+            </button>
+
+            <button
+              onClick={handleCheckUpdate}
+              disabled={isCheckingUpdate}
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[var(--border-color)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
+            >
+              <RefreshCw className={`w-4 h-4 text-purple-400 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+              <span>{isCheckingUpdate ? 'Checking...' : 'Check for Updates (v1.0.3)'}</span>
             </button>
           </div>
         </div>

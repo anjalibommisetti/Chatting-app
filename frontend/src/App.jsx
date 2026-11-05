@@ -56,6 +56,7 @@ export default function App() {
   const [showNewChatByPhone, setShowNewChatByPhone] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   // Subscribe to reactive store updates
   useEffect(() => {
@@ -63,6 +64,39 @@ export default function App() {
   }, []);
 
   const currentUser = store.currentUser;
+
+  // Auto-detect updates for mobile app & PWA
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const onMsg = (event) => {
+        if (event.data?.type === 'SW_UPDATED') {
+          setUpdateAvailable(true);
+        }
+      };
+      navigator.serviceWorker.addEventListener('message', onMsg);
+
+      const checkSWUpdate = () => {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg) {
+            reg.update().catch(() => {});
+            if (reg.waiting) {
+              setUpdateAvailable(true);
+            }
+          }
+        }).catch(() => {});
+      };
+
+      checkSWUpdate();
+      const interval = setInterval(checkSWUpdate, 30000);
+      window.addEventListener('focus', checkSWUpdate);
+
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', onMsg);
+        clearInterval(interval);
+        window.removeEventListener('focus', checkSWUpdate);
+      };
+    }
+  }, []);
 
   // Auto-select first conversation on desktop if none selected
   useEffect(() => {
@@ -107,7 +141,26 @@ export default function App() {
   // If user is not logged in, show Welcome / Onboarding Screen
   if (!currentUser) {
     return (
-      <div className="w-full h-screen bg-[#07090F] overflow-hidden">
+      <div className="w-full h-screen bg-[#07090F] overflow-hidden relative">
+        {/* Floating Auto-Update Banner for Mobile */}
+        {updateAvailable && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] w-[90%] max-w-sm bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white p-3 rounded-2xl shadow-2xl border border-white/20 flex items-center justify-between gap-2 animate-bounce">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🚀</span>
+              <div className="text-left">
+                <p className="text-xs font-bold leading-tight">New Update Ready!</p>
+                <p className="text-[10px] text-purple-200">Tap to load the latest version</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-white text-purple-700 font-extrabold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
+            >
+              Update
+            </button>
+          </div>
+        )}
+
         <WelcomeScreen
           onOpenLogin={() => {
             setShowSignup(false);
@@ -175,6 +228,25 @@ export default function App() {
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative pb-16 md:pb-0">
+        {/* Floating Auto-Update Banner for Mobile & Web */}
+        {updateAvailable && (
+          <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white px-4 py-2.5 flex items-center justify-between text-xs z-40 shadow-xl border-b border-white/20 animate-fade-in flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🚀</span>
+              <div>
+                <strong className="font-bold">New Update Available!</strong>
+                <span className="hidden sm:inline text-purple-200 ml-1.5">Latest features and fixes are ready.</span>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload(true)}
+              className="px-3.5 py-1 rounded-lg bg-white text-purple-700 font-extrabold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
+            >
+              Update Now
+            </button>
+          </div>
+        )}
+
         {/* Chrome / Web Notifications Permission Activation Banner */}
         {showNotifBanner && (
           <div className="bg-gradient-to-r from-purple-900/95 via-indigo-900/95 to-purple-900/95 border-b border-purple-500/30 px-4 py-2.5 flex items-center justify-between text-xs text-white z-30 shadow-lg flex-shrink-0 animate-fade-in">
