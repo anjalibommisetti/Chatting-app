@@ -899,8 +899,8 @@ io.on('connection', (socket) => {
 
     console.log(`[Socket Connected] User: ${user.name} (${user.id}) Socket ID: ${socket.id}`);
 
-    db.updateUser(user.id, { status: 'online', lastSeen: 'Active now' });
-    io.emit('user-status-changed', { userId: user.id, status: 'online', lastSeen: 'Active now' });
+    db.updateUser(user.id, { status: 'online', lastSeen: Date.now() });
+    io.emit('user-status-changed', { userId: user.id, status: 'online', lastSeen: Date.now() });
   } else {
     console.log(`[Socket Connected Anonymous] Socket ID: ${socket.id}`);
   }
@@ -1090,7 +1090,7 @@ io.on('connection', (socket) => {
 
       const hasOtherSockets = Array.from(activeSockets.values()).includes(user.id);
       if (!hasOtherSockets) {
-        const lastSeen = 'Active ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const lastSeen = Date.now();
         db.updateUser(user.id, { status: 'offline', lastSeen });
         io.emit('user-status-changed', { userId: user.id, status: 'offline', lastSeen });
       }

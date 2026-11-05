@@ -34,8 +34,47 @@ import { store } from '../../services/store';
 import { api } from '../../services/api';
 import GifPickerModal from './GifPickerModal';
 import ViewOnceModal from './ViewOnceModal';
+import EmojiPickerModal from './EmojiPickerModal';
 
-const QUICK_EMOJIS = ['❤️', '😂', '🔥', '👍', '🎉', '😍', '👏', '🚀', '✨', '🤔', '😭', '💯'];
+function formatLastSeenStatus(peer) {
+  if (!peer) return 'Last seen recently';
+  if (peer.status === 'online') return 'Active now';
+
+  const lastSeen = peer.lastSeen;
+  if (!lastSeen) return 'Last seen recently';
+
+  if (typeof lastSeen === 'string' && lastSeen.toLowerCase().includes('active now')) {
+    return 'Active now';
+  }
+
+  const timeMs = typeof lastSeen === 'number' ? lastSeen : parseInt(lastSeen, 10);
+  if (!timeMs || isNaN(timeMs) || timeMs < 1000000000) {
+    return 'Last seen recently';
+  }
+
+  const date = new Date(timeMs);
+  const now = new Date();
+  const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+  if (diffMinutes < 1) return 'Active just now';
+  if (diffMinutes < 60) return `Active ${diffMinutes}m ago`;
+
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return `Last seen today at ${timeStr}`;
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Last seen yesterday at ${timeStr}`;
+  }
+
+  return `Last seen ${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timeStr}`;
+}
+
+const QUICK_REACTION_EMOJIS = ['❤️', '👍', '😂', '🔥', '😍', '👏', '😮', '😢'];
 
 export default function ChatArea({ 
   conversationId, 
@@ -108,12 +147,8 @@ export default function ChatArea({
     statusSubtitle = `${typingUsers.join(', ')} is typing...`;
   } else if (isGroup) {
     statusSubtitle = `${group?.members?.length || 0}/5 members (Strict Max 5)`;
-  } else if (peer?.status === 'online') {
-    statusSubtitle = 'Active now';
-  } else if (peer?.lastSeen) {
-    statusSubtitle = peer.lastSeen.startsWith('Active') ? peer.lastSeen : `Last seen ${peer.lastSeen}`;
   } else {
-    statusSubtitle = 'Last seen recently';
+    statusSubtitle = formatLastSeenStatus(peer);
   }
 
   // Auto-fetch messages on open & join room
@@ -638,7 +673,7 @@ export default function ChatArea({
 
                     {/* Quick Reactions */}
                     <div className="flex items-center gap-0.5 px-1 border-x border-[var(--border-color)]">
-                      {['❤️', '👍', '🔥'].map(emoji => (
+                      {QUICK_REACTION_EMOJIS.map(emoji => (
                         <button
                           key={emoji}
                           onClick={() => store.toggleReaction(msg.id, emoji)}
@@ -754,28 +789,14 @@ export default function ChatArea({
         </div>
       )}
 
-      {/* Emoji Picker Drawer */}
-      {showEmojiPicker && (
-        <div className="absolute bottom-20 left-4 z-30 p-3 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl backdrop-blur-xl animate-fadeIn">
-          <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block mb-2 px-1">
-            Reactions & Emojis
-          </span>
-          <div className="grid grid-cols-6 gap-2">
-            {QUICK_EMOJIS.map(emoji => (
-              <button
-                key={emoji}
-                onClick={() => {
-                  setInputText(prev => prev + emoji);
-                  setShowEmojiPicker(false);
-                }}
-                className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center text-lg hover:scale-125 transition-transform cursor-pointer"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Full-Featured Categorized Emoji Picker Modal */}
+      <EmojiPickerModal
+        isOpen={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onSelectEmoji={(emoji) => {
+          setInputText(prev => prev + emoji);
+        }}
+      />
 
       {/* Input Bar */}
       <div className="p-3 sm:p-4 bg-[var(--bg-surface)] border-t border-[var(--border-color)] flex items-center gap-2 relative z-20 flex-shrink-0">
