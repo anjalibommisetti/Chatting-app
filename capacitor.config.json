@@ -3,7 +3,7 @@
   "appName": "VibeChat",
   "webDir": "dist",
   "server": {
-    "androidScheme": "http",
+    "url": "https://chatting-app-tan.vercel.app",
     "cleartext": true,
     "allowNavigation": ["*"]
   },
