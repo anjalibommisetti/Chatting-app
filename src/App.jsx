@@ -55,6 +55,7 @@ export default function App() {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showNewChatByPhone, setShowNewChatByPhone] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showNotifBanner, setShowNotifBanner] = useState(false);
 
   // Subscribe to reactive store updates
   useEffect(() => {
@@ -70,6 +71,26 @@ export default function App() {
     }
   }, [currentUser, activeConversationId]);
 
+  // Check notification permission
+  useEffect(() => {
+    if (currentUser && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        setShowNotifBanner(true);
+      }
+    }
+  }, [currentUser]);
+
+  const handleEnableNotifications = async () => {
+    const res = await notifications.requestPermission();
+    setShowNotifBanner(false);
+    if (res === 'granted') {
+      notifications.showMessageNotification({
+        senderName: 'VibeChat 🔔',
+        text: 'Chrome notifications enabled! You will now receive alerts for incoming messages.'
+      });
+    }
+  };
+
   // Handle notification clicks to open specific conversation & request notification permissions
   useEffect(() => {
     window.__openConversation = (convId) => {
@@ -78,9 +99,6 @@ export default function App() {
         setCurrentTab('chats');
       }
     };
-    if (currentUser) {
-      notifications.requestPermission().catch(() => {});
-    }
     return () => {
       delete window.__openConversation;
     };
@@ -156,7 +174,34 @@ export default function App() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex h-full overflow-hidden relative pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative pb-16 md:pb-0">
+        {/* Chrome / Web Notifications Permission Activation Banner */}
+        {showNotifBanner && (
+          <div className="bg-gradient-to-r from-purple-900/95 via-indigo-900/95 to-purple-900/95 border-b border-purple-500/30 px-4 py-2.5 flex items-center justify-between text-xs text-white z-30 shadow-lg flex-shrink-0 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🔔</span>
+              <span>
+                <strong className="text-purple-300">Enable Chrome Notifications:</strong> Get real-time desktop & mobile alerts when friends message or call you.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleEnableNotifications}
+                className="px-3 py-1 rounded-lg bg-purple-500 hover:bg-purple-400 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                Allow
+              </button>
+              <button
+                onClick={() => setShowNotifBanner(false)}
+                className="p-1 text-white/60 hover:text-white rounded-md cursor-pointer text-xs"
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: CHATS & GROUPS */}
         {(currentTab === 'chats' || currentTab === 'groups') && (
           <div className="flex-1 flex w-full h-full overflow-hidden">
@@ -168,6 +213,7 @@ export default function App() {
                 onOpenCreateGroup={() => setShowCreateGroup(true)}
                 onOpenJoinGroup={() => setShowJoinGroup(true)}
                 onOpenNewChatByPhone={() => setShowNewChatByPhone(true)}
+                onOpenQR={() => setShowQRModal(true)}
                 onStartCall={(callPayload) => calling.startCall(callPayload)}
               />
             </div>
@@ -207,7 +253,7 @@ export default function App() {
 
         {/* TAB 4: SETTINGS */}
         {currentTab === 'settings' && (
-          <SettingsView />
+          <SettingsView onOpenQR={() => setShowQRModal(true)} />
         )}
 
         {/* TAB 5: PROFILE */}

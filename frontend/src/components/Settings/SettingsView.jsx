@@ -25,13 +25,16 @@ import {
   Download,
   Upload,
   RefreshCw,
-  FileText
+  FileText,
+  Smartphone,
+  QrCode,
+  Info
 } from 'lucide-react';
 import { store } from '../../services/store';
 import { sound } from '../../services/audio';
 import { notifications } from '../../services/notifications';
 
-export default function SettingsView() {
+export default function SettingsView({ onOpenQR }) {
   const currentUser = store.currentUser;
   const [theme, setTheme] = useState(store.settings.theme || 'dark');
   const [readReceipts, setReadReceipts] = useState(store.settings.readReceipts);
@@ -299,6 +302,42 @@ export default function SettingsView() {
             </div>
           </div>
 
+          {/* Guide: How to enable in Mobile App Info & Chrome */}
+          <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-[var(--border-color)] space-y-2.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)]">
+              <Info className="w-4 h-4 text-purple-400" />
+              <span>How to Enable Notifications on Mobile App & Chrome</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+              {/* Option A: Mobile App */}
+              <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-1">
+                <span className="font-semibold text-purple-300 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5" />
+                  Mobile App (Android App Info)
+                </span>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  1. Long-press the VibeChat icon on your phone &rarr; tap <strong>ⓘ App Info</strong>.<br/>
+                  2. Tap <strong>Notifications</strong> &rarr; turn <strong>Allow notifications</strong> to <strong>ON</strong>.<br/>
+                  3. You'll now get status bar alerts for messages & calls!
+                </p>
+              </div>
+
+              {/* Option B: Chrome Browser */}
+              <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-1">
+                <span className="font-semibold text-indigo-300 flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Google Chrome (Web Browser)
+                </span>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  1. Tap the <strong>🔒 Lock / Settings icon</strong> in Chrome's URL address bar.<br/>
+                  2. Tap <strong>Permissions</strong> &rarr; <strong>Notifications</strong> &rarr; choose <strong>Allow</strong>.<br/>
+                  3. System notifications will pop up even when Chrome is minimized!
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Read Receipts */}
           <div className="flex items-center justify-between py-2 border-b border-[var(--border-color)]">
             <div>
@@ -332,6 +371,33 @@ export default function SettingsView() {
               <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
                 soundAlerts ? 'translate-x-5' : 'translate-x-0'
               }`}></div>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile App & QR Codes Hub */}
+        <div className="p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 text-[var(--text-primary)] font-heading font-bold text-base">
+              <Smartphone className="w-5 h-5 text-emerald-400" />
+              <span>Mobile App & QR Codes</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+              Auto-Updating
+            </span>
+          </div>
+
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            Install VibeChat on your phone via QR code. Any updates or changes pushed to the web will automatically sync to your installed mobile app without needing to re-download.
+          </p>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              onClick={onOpenQR}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-md shadow-purple-600/30 cursor-pointer transition-all"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Open Mobile App QR & Scanner</span>
             </button>
           </div>
         </div>

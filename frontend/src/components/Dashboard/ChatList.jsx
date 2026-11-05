@@ -21,7 +21,9 @@ import {
   MessageSquarePlus,
   Inbox,
   Loader2,
-  UserCheck
+  UserCheck,
+  Smartphone,
+  QrCode
 } from 'lucide-react';
 import { store } from '../../services/store';
 
@@ -31,6 +33,7 @@ export default function ChatList({
   onOpenCreateGroup, 
   onOpenJoinGroup,
   onOpenNewChatByPhone,
+  onOpenQR,
   onStartCall 
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -153,6 +156,16 @@ export default function ChatList({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onOpenQR && (
+              <button
+                onClick={onOpenQR}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/30 transition-all cursor-pointer flex items-center gap-1 text-xs font-semibold shadow-xs"
+                title="Install Mobile App & QR Scanner"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Get App</span>
+              </button>
+            )}
             <button
               onClick={onOpenNewChatByPhone}
               className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-md shadow-purple-600/25 active:scale-95"

@@ -139,8 +139,8 @@ class NotificationService {
     if (this.hasPermission()) {
       const options = {
         body,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
         tag: 'msg_' + (conversationId || Date.now()),
         renotify: true,
         vibrate: [200, 100, 200],
@@ -154,9 +154,14 @@ class NotificationService {
       // Must use ServiceWorkerRegistration.showNotification()
       if ('serviceWorker' in navigator) {
         try {
-          const reg = await navigator.serviceWorker.ready;
-          await reg.showNotification(title, options);
-          return;
+          const reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise(resolve => setTimeout(() => resolve(this.swReg), 600))
+          ]);
+          if (reg && reg.showNotification) {
+            await reg.showNotification(title, options);
+            return;
+          }
         } catch (swErr) {
           console.warn('[Notifications] SW showNotification error:', swErr);
         }
@@ -170,7 +175,9 @@ class NotificationService {
           if (onClick) onClick();
           notif.close();
         };
-        setTimeout(() => notif.close(), 6000);
+        setTimeout(() => {
+          try { notif.close(); } catch (e) {}
+        }, 6000);
       } catch (err) {
         console.warn('[Notifications] Desktop notification constructor failed:', err);
       }
@@ -209,7 +216,8 @@ class NotificationService {
     if (this.hasPermission()) {
       const options = {
         body,
-        icon: '/favicon.ico',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
         tag: 'call_' + Date.now(),
         requireInteraction: true,
         vibrate: [500, 250, 500, 250, 500],
@@ -218,9 +226,14 @@ class NotificationService {
 
       if ('serviceWorker' in navigator) {
         try {
-          const reg = await navigator.serviceWorker.ready;
-          await reg.showNotification(title, options);
-          return;
+          const reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise(resolve => setTimeout(() => resolve(this.swReg), 600))
+          ]);
+          if (reg && reg.showNotification) {
+            await reg.showNotification(title, options);
+            return;
+          }
         } catch (e) {}
       }
 

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="vibeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333ea"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#vibeGrad)"/>
+  <path d="M256 96 C167.6 96 96 167.6 96 256 C96 288.5 105.8 318.7 122.6 344 L102 416 L177 396 C200.7 408.8 227.6 416 256 416 C344.4 416 416 344.4 416 256 C416 167.6 344.4 96 256 96 Z" fill="#ffffff" fill-opacity="0.95"/>
+  <circle cx="200" cy="256" r="24" fill="#9333ea"/>
+  <circle cx="256" cy="256" r="24" fill="#7c3aed"/>
+  <circle cx="312" cy="256" r="24" fill="#6366f1"/>
+</svg>

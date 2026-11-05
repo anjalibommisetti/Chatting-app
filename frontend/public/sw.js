@@ -27,8 +27,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'VibeConnect';
   const options = {
     body: data.body || data.text || 'New message received',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     tag: data.tag || 'vibe_msg_' + Date.now(),
     renotify: true,
     vibrate: [200, 100, 200],
