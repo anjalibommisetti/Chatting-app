@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download & Install VibeChat Mobile App</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <meta name="theme-color" content="#9333ea">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #0B0E17;
+      color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: #141824;
+      border: 1px solid rgba(147, 51, 234, 0.3);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      border-radius: 28px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .app-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #9333ea, #4f46e5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      box-shadow: 0 10px 25px rgba(147, 51, 234, 0.4);
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: #34D399;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    p.desc {
+      font-size: 13px;
+      color: #94A3B8;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      background: linear-gradient(135deg, #9333ea, #6366f1);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 16px 20px;
+      border-radius: 18px;
+      box-shadow: 0 10px 25px rgba(147, 51, 234, 0.4);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-download:active {
+      transform: scale(0.97);
+    }
+    .steps {
+      width: 100%;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 16px;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #CBD5E1;
+      line-height: 1.6;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .step-item:last-child {
+      margin-bottom: 0;
+    }
+    .num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(147, 51, 234, 0.3);
+      color: #C084FC;
+      font-weight: 800;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .status-text {
+      font-size: 11px;
+      color: #A855F7;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="app-icon">💬</div>
+    <h1>VibeChat for Android</h1>
+    <span class="badge">Official Mobile APK • 4.3 MB</span>
+    <p class="desc">
+      Ultra-secure real-time chatting, instant mobile notifications, and HD voice & video calls.
+    </p>
+
+    <a id="downloadBtn" href="/VibeChat.apk" download="VibeChat.apk" class="btn-download">
+      <span>⬇️</span> Download VibeChat.apk
+    </a>
+
+    <div id="statusText" class="status-text">
+      Starting download automatically...
+    </div>
+
+    <div class="steps">
+      <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">How to Install:</div>
+      <div class="step-item">
+        <div class="num">1</div>
+        <div>If your browser warns <em>"File might be harmful"</em>, tap <strong>Download anyway</strong>.</div>
+      </div>
+      <div class="step-item">
+        <div class="num">2</div>
+        <div>When download finishes, tap <strong>Open</strong> in the notification bar.</div>
+      </div>
+      <div class="step-item">
+        <div class="num">3</div>
+        <div>Tap <strong>Install</strong> (if prompted, enable <em>"Allow from this source"</em>).</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Automatically trigger APK download upon page visit
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const btn = document.getElementById('downloadBtn');
+        if (btn) {
+          btn.click();
+          document.getElementById('statusText').innerText = '✅ Download started! Check your notification bar.';
+        }
+      }, 800);
+    });
+  </script>
+</body>
+</html>

@@ -30,7 +30,7 @@ export default function QRCodeModal({ isOpen, onClose, onUserScanned, initialTab
   const [isScanning, setIsScanning] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [scannedData, setScannedData] = useState(null);
-  const [downloadMode, setDownloadMode] = useState('pwa'); // 'pwa' | 'apk'
+  const [downloadMode, setDownloadMode] = useState('apk'); // default to 'apk' for direct APK install
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -39,14 +39,14 @@ export default function QRCodeModal({ isOpen, onClose, onUserScanned, initialTab
 
   const currentUser = store.currentUser;
   
-  // Production Web App URL (PWA auto-updating)
+  // Production Web App URL
   const webAppUrl = typeof window !== 'undefined' && window.location.origin.includes('localhost') 
     ? 'https://chatting-app-tan.vercel.app' 
     : (typeof window !== 'undefined' ? window.location.origin : 'https://chatting-app-tan.vercel.app');
 
   const apkDownloadUrl = '/VibeChat.apk';
 
-  const currentQrTarget = downloadMode === 'pwa' ? webAppUrl : `${webAppUrl}/VibeChat.apk`;
+  const currentQrTarget = downloadMode === 'apk' ? `${webAppUrl}/download.html` : webAppUrl;
 
   // Profile QR payload
   const profileQrData = currentUser 
