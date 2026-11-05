@@ -324,8 +324,8 @@ export default function ChatList({
             const peerId = !isGroup ? conv.participantIds?.find(id => id !== currentUser?.id) : null;
             const peer = !isGroup ? store.getUserById(peerId) : null;
 
-            const rawTitle = isGroup ? (group?.name || 'Group') : (peer ? store.getDisplayName(peer) : (conv.recipientName || (peerId ? peerId.replace(/^(user_|usr_phone_|usr_)/, '') : 'Friend')));
-            const title = rawTitle === 'Unknown' ? 'Friend' : rawTitle;
+            const rawTitle = isGroup ? (group?.name || 'Group') : (peer ? store.getDisplayName(peer) : (conv.recipientName || store.getDisplayName(peerId)));
+            const title = rawTitle === 'Unknown' || rawTitle.includes('_') ? 'Friend' : rawTitle;
             const avatar = isGroup ? (group?.avatar || '👥') : (peer?.avatar || '👤');
             const isActive = activeConversationId === conv.id;
 

@@ -236,6 +236,8 @@ class StoreService {
         user.status = status;
         user.lastSeen = lastSeen;
         this.notify();
+      } else if (userId && !userId.startsWith('usr_phone_')) {
+        this.fetchUserById(userId);
       }
     });
 
@@ -343,17 +345,22 @@ class StoreService {
         api.getGroups().catch(() => ({ groups: [] }))
       ]);
 
-      if (convRes.conversations) {
-        this.conversations = convRes.conversations.filter(c => 
+      const rawConvList = Array.isArray(convRes) ? convRes : (convRes?.conversations || []);
+      if (rawConvList.length > 0) {
+        this.conversations = rawConvList.filter(c => 
           !c.participantIds?.some(pid => pid.startsWith('usr_phone_'))
         );
       }
-      if (usersRes.users && usersRes.users.length > 0) {
-        this.users = usersRes.users.filter(u => !u.id.startsWith('usr_phone_'));
+
+      const rawUserList = Array.isArray(usersRes) ? usersRes : (usersRes?.users || []);
+      if (rawUserList.length > 0) {
+        this.users = rawUserList.filter(u => !u.id.startsWith('usr_phone_'));
         this.saveStorage('vibe_users', this.users);
       }
-      if (groupsRes.groups) {
-        this.groups = groupsRes.groups;
+
+      const rawGroupList = Array.isArray(groupsRes) ? groupsRes : (groupsRes?.groups || []);
+      if (rawGroupList.length > 0) {
+        this.groups = rawGroupList;
       }
       this.notify();
     } catch (e) {
@@ -670,10 +677,11 @@ class StoreService {
     realtime.joinConversation(convId);
     try {
       const res = await api.getMessages(convId, 150);
-      if (res.messages && res.messages.length > 0) {
+      const rawMsgList = Array.isArray(res) ? res : (res?.messages || []);
+      if (rawMsgList.length > 0) {
         // Merge without duplicates
         const existingIds = new Set(this.messages.map(m => m.id));
-        const newOnes = res.messages.filter(m => !existingIds.has(m.id));
+        const newOnes = rawMsgList.filter(m => !existingIds.has(m.id));
         if (newOnes.length > 0) {
           this.messages.push(...newOnes);
           this.notify();
@@ -991,8 +999,10 @@ class StoreService {
     if (typeof user === 'string') {
       const found = this.getUserById(user);
       if (found) return this.getDisplayName(found);
+      this.fetchUserById(user);
       const clean = user.replace(/^(user_|usr_phone_|usr_)/, '');
-      return clean.length >= 10 ? clean : 'Friend';
+      const isDigitsOnly = /^\d{10,}$/.test(clean);
+      return isDigitsOnly ? clean : 'Friend';
     }
     if (this.friendNicknames && this.friendNicknames[user.id]) {
       return this.friendNicknames[user.id];
@@ -1035,11 +1045,14 @@ class StoreService {
     return null;
   }
 
-  togglePin(conversationId) {
+  async togglePin(conversationId) {
     const conv = this.conversations.find(c => c.id === conversationId);
     if (conv) {
       conv.isPinned = !conv.isPinned;
       this.notify();
+      try {
+        await api.togglePin(conversationId, conv.isPinned);
+      } catch (e) {}
     }
   }
 

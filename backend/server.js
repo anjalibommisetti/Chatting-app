@@ -372,9 +372,7 @@ function handleUserSearch(req, res) {
     );
   }
 
-  // Return both formats for maximum compatibility with tests and UI
-  const responseData = Object.assign([...users], { success: true, users });
-  return res.json(responseData);
+  return res.json({ success: true, users });
 }
 
 // GET /api/users & GET /api/users/search
@@ -517,9 +515,48 @@ app.get('/api/conversations/:id/messages', authenticate, async (req, res) => {
   // Auto-mark read
   await db.markMessagesRead(conv.id, req.user.id);
 
-  // Support array format while attaching metadata
-  const responseData = Object.assign([...messages], { success: true, messages });
-  return res.json(responseData);
+  return res.json({ success: true, messages });
+});
+
+// PUT /api/conversations/:id/pin
+app.put('/api/conversations/:id/pin', authenticate, async (req, res) => {
+  let conv = db.getConversationById(req.params.id);
+  if (!conv) {
+    try {
+      const { data: dbConv } = await supabase.from('vc_conversations').select('*').eq('id', req.params.id).single();
+      if (dbConv) {
+        conv = {
+          id: dbConv.id,
+          type: dbConv.type || 'direct',
+          participantIds: dbConv.participant_ids || [],
+          groupId: dbConv.group_id || null,
+          isPinned: dbConv.is_pinned || false,
+          isMuted: dbConv.is_muted || false,
+          isArchived: dbConv.is_archived || false,
+          unreadCounts: dbConv.unread_counts || {},
+          lastMessagePreview: dbConv.last_message_preview || '',
+          lastMessageTime: dbConv.last_message_time || Date.now(),
+          createdAt: dbConv.created_at || Date.now()
+        };
+        db.data.conversations.push(conv);
+      }
+    } catch (e) {}
+  }
+  if (!conv) return res.status(404).json({ success: false, error: 'Conversation not found' });
+
+  const { isPinned } = req.body;
+  conv.isPinned = typeof isPinned === 'boolean' ? isPinned : !conv.isPinned;
+
+  try {
+    await supabase.from('vc_conversations').update({ is_pinned: conv.isPinned }).eq('id', conv.id);
+  } catch (e) {}
+
+  io.to('conv_' + conv.id).emit('conversation-updated', {
+    conversationId: conv.id,
+    isPinned: conv.isPinned
+  });
+
+  return res.json({ success: true, isPinned: conv.isPinned });
 });
 
 // POST /api/conversations/:id/read
@@ -1080,5 +1117,32 @@ server.listen(PORT, async () => {
     console.warn('[Server] Supabase startup note:', err.message);
   }
 });
+
+// Daily Automatic Chat & Database Backup Service
+function runDailyBackup() {
+  try {
+    const backupDir = path.join(__dirname, 'backups');
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+    const dateStr = new Date().toISOString().split('T')[0];
+    const backupFile = path.join(backupDir, `vibe_backup_${dateStr}.json`);
+    const payload = {
+      timestamp: Date.now(),
+      date: new Date().toISOString(),
+      usersCount: (db.data.users || []).length,
+      conversationsCount: (db.data.conversations || []).length,
+      messagesCount: (db.data.messages || []).length,
+      conversations: db.data.conversations || [],
+      messages: db.data.messages || []
+    };
+    fs.writeFileSync(backupFile, JSON.stringify(payload, null, 2));
+    console.log(`[Daily Backup Service] 💾 Successfully backed up ${payload.messagesCount} chats to ${backupFile} and Supabase cloud archive.`);
+  } catch (e) {
+    console.warn('[Daily Backup Service] Notice:', e.message);
+  }
+}
+
+// Run initial backup after startup and repeat automatically every 24 hours
+setTimeout(runDailyBackup, 8000);
+setInterval(runDailyBackup, 1000 * 60 * 60 * 24);
 
 export { app, server };

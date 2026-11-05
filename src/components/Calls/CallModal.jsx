@@ -212,11 +212,15 @@ export default function CallModal() {
                 key={peer.id}
                 className="relative w-full h-full min-h-[220px] rounded-3xl bg-[#101422] border border-white/10 overflow-hidden flex items-center justify-center shadow-2xl group"
               >
-                {/* Simulated / Remote Video Element */}
+                {/* Live Remote Camera Feed */}
                 <video
                   ref={(el) => {
                     if (el && calling.remoteStreams.has(peer.id)) {
-                      el.srcObject = calling.remoteStreams.get(peer.id);
+                      const stream = calling.remoteStreams.get(peer.id);
+                      if (el.srcObject !== stream) {
+                        el.srcObject = stream;
+                        el.play().catch(() => {});
+                      }
                     }
                   }}
                   autoPlay
@@ -225,7 +229,7 @@ export default function CallModal() {
                 />
 
                 {/* Voice Call or Camera Off Avatar Overlay */}
-                {(!isVideo || calling.remoteStreams.size === 0) && (
+                {(!isVideo || !calling.remoteStreams.has(peer.id)) && (
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative w-28 h-28 rounded-full bg-purple-600/20 border-2 border-purple-500/40 flex items-center justify-center text-6xl shadow-xl">
                       {peer.avatar}
@@ -251,7 +255,13 @@ export default function CallModal() {
               : 'relative w-full h-full min-h-[220px] rounded-3xl bg-[#101422] border border-purple-500/30 overflow-hidden flex items-center justify-center shadow-2xl'
           }`}>
             <video
-              ref={localVideoRef}
+              ref={(el) => {
+                localVideoRef.current = el;
+                if (el && calling.localStream && el.srcObject !== calling.localStream) {
+                  el.srcObject = calling.localStream;
+                  el.play().catch(() => {});
+                }
+              }}
               autoPlay
               playsInline
               muted

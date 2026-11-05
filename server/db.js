@@ -380,30 +380,35 @@ class SupabaseDatabase {
   }
 
   // ─── Messages ─────────────────────────────────────────────────────────────
-  async getMessagesByConversation(convId, limit = 100) {
+  async getMessagesByConversation(convId, limit = 150) {
     if (!this.data.messages) this.data.messages = [];
-    let localMsgs = this.data.messages
-      .filter(m => m.conversationId === convId)
-      .sort((a, b) => a.timestamp - b.timestamp);
 
-    if (localMsgs.length > 0) {
-      return localMsgs.slice(-limit);
+    try {
+      const { data, error } = await supabase
+        .from('vc_messages')
+        .select('*')
+        .eq('conversation_id', convId)
+        .order('timestamp', { ascending: true })
+        .limit(limit);
+
+      if (!error && data && data.length > 0) {
+        const fetched = data.map(msgFromRow);
+        const localIds = new Set(this.data.messages.map(m => m.id));
+        fetched.forEach(m => {
+          if (!localIds.has(m.id)) {
+            this.data.messages.push(m);
+          }
+        });
+        return fetched;
+      }
+    } catch (e) {
+      console.warn('[DB] Supabase getMessages fallback:', e.message);
     }
 
-    const { data, error } = await supabase
-      .from('vc_messages')
-      .select('*')
-      .eq('conversation_id', convId)
-      .order('timestamp', { ascending: true })
-      .limit(limit);
-    if (error) { console.warn('[DB] getMessages:', error.message); return []; }
-    const fetched = (data || []).map(msgFromRow);
-    fetched.forEach(m => {
-      if (!this.data.messages.some(existing => existing.id === m.id)) {
-        this.data.messages.push(m);
-      }
-    });
-    return fetched;
+    return this.data.messages
+      .filter(m => m.conversationId === convId)
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-limit);
   }
 
   async getMessageById(messageId) {

@@ -95,8 +95,8 @@ export default function ChatArea({
     }
   }, [peerId, peer]);
 
-  const rawTitle = peer ? store.getDisplayName(peer) : (conversation?.recipientName || (peerId ? peerId.replace(/^(user_|usr_phone_|usr_)/, '') : 'Friend'));
-  const title = isGroup ? (group?.name || 'Private Group') : (rawTitle === 'Unknown' ? 'Friend' : rawTitle);
+  const rawTitle = peer ? store.getDisplayName(peer) : (conversation?.recipientName || store.getDisplayName(peerId));
+  const title = isGroup ? (group?.name || 'Private Group') : (rawTitle === 'Unknown' || rawTitle.includes('_') ? 'Friend' : rawTitle);
   const avatar = isGroup ? (group?.avatar || '👥') : (peer?.avatar || '👤');
 
   // Typing indicators
@@ -110,8 +110,10 @@ export default function ChatArea({
     statusSubtitle = `${group?.members?.length || 0}/5 members (Strict Max 5)`;
   } else if (peer?.status === 'online') {
     statusSubtitle = 'Active now';
+  } else if (peer?.lastSeen) {
+    statusSubtitle = peer.lastSeen.startsWith('Active') ? peer.lastSeen : `Last seen ${peer.lastSeen}`;
   } else {
-    statusSubtitle = `Last seen ${peer?.lastSeen || 'recently'}`;
+    statusSubtitle = 'Last seen recently';
   }
 
   // Auto-fetch messages on open & join room

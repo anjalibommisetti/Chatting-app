@@ -216,6 +216,13 @@ class ApiClient {
     });
   }
 
+  async togglePin(conversationId, isPinned) {
+    return this.request(`/conversations/${conversationId}/pin`, {
+      method: 'PUT',
+      body: JSON.stringify({ isPinned })
+    });
+  }
+
   async getMessages(conversationId, limit = 100) {
     return this.request(`/conversations/${conversationId}/messages?limit=${limit}`);
   }

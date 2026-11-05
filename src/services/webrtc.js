@@ -81,10 +81,59 @@ class CallingService {
       }
     });
 
-    realtime.on('call-accepted', () => {
+    realtime.on('call-accepted', async () => {
       if (this.status === CALL_STATUS.OUTGOING_RINGING) {
-        this.acceptCall();
+        await this.acceptCall();
+        const otherId = (this.activeCall?.callerId === store.currentUser?.id)
+          ? this.activeCall?.targetId
+          : (this.activeCall?.callerId || this.activeCall?.targetId);
+        if (otherId) {
+          this.initiatePeerConnection(otherId);
+        }
       }
+    });
+
+    realtime.on('webrtc-offer', async ({ sdp, fromId, callType }) => {
+      try {
+        if (!this.localStream) {
+          await this.getLocalMedia(callType || this.activeCall?.type || 'video');
+        }
+        const pc = this.getOrCreatePeerConnection(fromId);
+        if (this.localStream) {
+          const senders = pc.getSenders();
+          this.localStream.getTracks().forEach(track => {
+            if (!senders.some(s => s.track === track)) {
+              pc.addTrack(track, this.localStream);
+            }
+          });
+        }
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        realtime.emit('webrtc-answer', { targetId: fromId, sdp: answer });
+      } catch (err) {
+        console.warn('[WebRTC] Answer creation error:', err);
+      }
+    });
+
+    realtime.on('webrtc-answer', async ({ sdp, fromId }) => {
+      try {
+        const pc = this.peerConnections.get(fromId);
+        if (pc) {
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        }
+      } catch (err) {
+        console.warn('[WebRTC] Remote description error:', err);
+      }
+    });
+
+    realtime.on('webrtc-ice-candidate', async ({ candidate, fromId }) => {
+      try {
+        const pc = this.peerConnections.get(fromId);
+        if (pc && candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+        }
+      } catch (err) {}
     });
 
     realtime.on('call-rejected', () => {
@@ -100,6 +149,74 @@ class CallingService {
         this.endCall(false);
       }
     });
+  }
+
+  getOrCreatePeerConnection(peerId) {
+    if (this.peerConnections.has(peerId)) {
+      return this.peerConnections.get(peerId);
+    }
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ]
+    });
+
+    pc.ontrack = (event) => {
+      console.log('[WebRTC] Received live remote track from', peerId, event.streams);
+      if (event.streams && event.streams[0]) {
+        this.remoteStreams.set(peerId, event.streams[0]);
+        this.notify();
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        realtime.emit('webrtc-ice-candidate', {
+          targetId: peerId,
+          candidate: event.candidate
+        });
+      }
+    };
+
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        pc.addTrack(track, this.localStream);
+      });
+    }
+
+    this.peerConnections.set(peerId, pc);
+    return pc;
+  }
+
+  async initiatePeerConnection(targetId) {
+    try {
+      if (!this.localStream) {
+        await this.getLocalMedia(this.activeCall?.type || 'video');
+      }
+      const pc = this.getOrCreatePeerConnection(targetId);
+      if (this.localStream) {
+        const senders = pc.getSenders();
+        this.localStream.getTracks().forEach(track => {
+          if (!senders.some(s => s.track === track)) {
+            pc.addTrack(track, this.localStream);
+          }
+        });
+      }
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: (this.activeCall?.type === 'video')
+      });
+      await pc.setLocalDescription(offer);
+      realtime.emit('webrtc-offer', {
+        targetId,
+        sdp: offer,
+        callType: this.activeCall?.type || 'video'
+      });
+    } catch (err) {
+      console.warn('[WebRTC] Offer initiation error:', err);
+    }
   }
 
   subscribe(listener) {
@@ -192,6 +309,11 @@ class CallingService {
       this.screenStream.getTracks().forEach(t => t.stop());
       this.screenStream = null;
     }
+    this.peerConnections.forEach(pc => {
+      try { pc.close(); } catch (e) {}
+    });
+    this.peerConnections.clear();
+    this.remoteStreams.clear();
     this.isScreenSharing = false;
   }
 
