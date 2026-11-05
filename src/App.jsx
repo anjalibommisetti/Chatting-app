@@ -227,7 +227,7 @@ export default function App() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative pb-16 md:pb-0">
+      <div className={`flex-1 flex flex-col h-full overflow-hidden relative ${activeConversationId ? 'pb-0' : 'pb-16 md:pb-0'}`}>
         {/* Floating Auto-Update Banner for Mobile & Web */}
         {updateAvailable && (
           <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white px-4 py-2.5 flex items-center justify-between text-xs z-40 shadow-xl border-b border-white/20 animate-fade-in flex-shrink-0">
@@ -334,17 +334,19 @@ export default function App() {
         )}
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <BottomNav
-        currentTab={currentTab}
-        setTab={(tab) => {
-          setCurrentTab(tab);
-          if (tab === 'chats') setActiveConversationId(null);
-        }}
-        onOpenCreateGroup={() => setShowCreateGroup(true)}
-        onOpenNewChatByPhone={() => setShowNewChatByPhone(true)}
-        onOpenQR={() => setShowQRModal(true)}
-      />
+      {/* Mobile Bottom Navigation - Hidden when actively chatting */}
+      {!activeConversationId && (
+        <BottomNav
+          currentTab={currentTab}
+          setTab={(tab) => {
+            setCurrentTab(tab);
+            if (tab === 'chats') setActiveConversationId(null);
+          }}
+          onOpenCreateGroup={() => setShowCreateGroup(true)}
+          onOpenNewChatByPhone={() => setShowNewChatByPhone(true)}
+          onOpenQR={() => setShowQRModal(true)}
+        />
+      )}
 
       {/* Modals */}
       <NewChatByPhoneModal

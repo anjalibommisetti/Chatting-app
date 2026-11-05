@@ -461,22 +461,22 @@ export default function ChatArea({
                 </div>
               )}
 
-              <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'} group relative`}>
+              <div className={`w-full flex flex-col ${isSelf ? 'items-end' : 'items-start'} group relative my-1`}>
                 {/* Group Sender Name */}
                 {isGroup && !isSelf && (
-                  <span className="text-[11px] font-semibold text-purple-400 ml-10 mb-1">
+                  <span className="text-[11px] font-semibold text-purple-400 ml-9 mb-1">
                     {senderDisplayName}
                   </span>
                 )}
 
-                <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[70%] ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`flex items-end gap-1.5 max-w-[85%] sm:max-w-[70%] ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}>
                   {/* Avatar */}
-                  <div className="w-8 h-8 rounded-xl bg-white/5 border border-[var(--border-color)] flex items-center justify-center text-base flex-shrink-0 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-white/5 border border-[var(--border-color)] flex items-center justify-center text-sm flex-shrink-0 mb-0.5 select-none">
                     {sender?.avatar || '👤'}
                   </div>
 
                   {/* Message Bubble Block */}
-                  <div className="space-y-1">
+                  <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'} min-w-0`}>
                     {/* Quoted Reply Preview */}
                     {repliedMsg && (
                       <div className="text-[11px] px-3 py-1.5 rounded-xl bg-black/20 border-l-2 border-purple-500 text-[var(--text-muted)] truncate max-w-xs mb-1">
@@ -514,10 +514,10 @@ export default function ChatArea({
                       </div>
                     ) : (
                       <div
-                        className={`p-3.5 rounded-2xl text-sm relative shadow-md transition-all message-bubble ${
+                        className={`px-4 py-2.5 rounded-2xl text-sm relative shadow-sm transition-all message-bubble max-w-full inline-block ${
                           isSelf
-                            ? 'bg-vibe-gradient text-white rounded-br-xs'
-                            : 'bg-[var(--chat-bubble-peer)] border border-[var(--chat-bubble-border)] text-[var(--chat-bubble-peer-text)] rounded-bl-xs'
+                            ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-br-xs'
+                            : 'bg-[#191e32] border border-white/10 text-slate-100 rounded-bl-xs'
                         }`}
                       >
                         {/* View-Once Photo Bubble */}
@@ -595,19 +595,19 @@ export default function ChatArea({
 
                         {/* Message Text */}
                         {msg.text && (
-                          <p className={`leading-relaxed break-words select-text ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
+                          <p className={`leading-relaxed whitespace-pre-wrap break-words select-text ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
                             {msg.text}
                           </p>
                         )}
 
                         {/* Meta: Timestamp, Edited tag, Delivery status */}
-                        <div className={`flex items-center justify-end gap-1.5 mt-1 text-[10px] ${isSelf ? 'text-purple-200/80' : 'text-[var(--text-muted)]'}`}>
+                        <div className={`flex items-center justify-end gap-1.5 mt-0.5 text-[10px] ${isSelf ? 'text-purple-200/80' : 'text-slate-400'}`}>
                           {msg.isEdited && <span>(edited)</span>}
                           <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
 
                           {/* WhatsApp / Telegram Status Ticks for Sent Messages */}
                           {isSelf && (
-                            <span>
+                            <span className="flex items-center">
                               {msg.status === 'sending' && (
                                 <Clock className="w-3 h-3 text-purple-200/60 animate-spin" />
                               )}
@@ -829,23 +829,23 @@ export default function ChatArea({
           <Paperclip className="w-5 h-5" />
         </button>
 
-        {/* Quick View-Once Photo Button */}
+        {/* Quick View-Once Photo Button (hidden on narrow screens to maximize typing area) */}
         <button
           type="button"
           onClick={() => viewOnceInputRef.current?.click()}
           disabled={uploading}
-          className="p-2 rounded-xl text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20 transition-all cursor-pointer font-bold text-xs flex items-center gap-1 shadow-xs"
+          className="hidden sm:flex p-2 rounded-xl text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20 transition-all cursor-pointer font-bold text-xs items-center gap-1 shadow-xs"
           title="Send View-Once Photo (Vanishes once opened)"
         >
           <span className="text-sm font-extrabold leading-none">①</span>
-          <span className="hidden sm:inline text-[11px] font-semibold">1-View</span>
+          <span className="text-[11px] font-semibold">1-View</span>
         </button>
 
-        {/* Animated GIFs Button */}
+        {/* Animated GIFs Button (hidden on narrow screens) */}
         <button
           type="button"
           onClick={() => setShowGifPicker(!showGifPicker)}
-          className="px-2.5 py-1.5 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 hover:text-white transition-all font-mono font-bold text-xs cursor-pointer"
+          className="hidden sm:flex px-2.5 py-1.5 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 hover:text-white transition-all font-mono font-bold text-xs cursor-pointer"
           title="Browse & Send Animated GIFs"
         >
           GIF
