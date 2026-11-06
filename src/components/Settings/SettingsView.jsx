@@ -65,23 +65,33 @@ export default function SettingsView({ onOpenQR }) {
 
   const handleCheckUpdate = async () => {
     setIsCheckingUpdate(true);
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      try {
+    try {
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) {
           await reg.update();
-          if (reg.waiting) {
-            showToast('New update found! Reloading app...');
-            setTimeout(() => window.location.reload(true), 1200);
-            return;
-          }
         }
-      } catch (e) {}
-    }
-    setTimeout(() => {
-      showToast('Your VibeChat mobile app is up to date! (v1.0.3) ✅');
+      }
+      const res = await fetch(`/version.json?_t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.version && data.version !== '1.0.4') {
+          showToast(`Updating to latest version ${data.version}...`);
+          setTimeout(() => window.location.reload(true), 800);
+          return;
+        }
+      }
+      showToast('Refreshing app to latest version... ✅');
+      setTimeout(() => window.location.reload(true), 800);
+    } catch (e) {
+      window.location.reload(true);
+    } finally {
       setIsCheckingUpdate(false);
-    }, 800);
+    }
   };
 
   const handleChangeKey = (e) => {
@@ -428,7 +438,7 @@ export default function SettingsView({ onOpenQR }) {
               className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[var(--border-color)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
             >
               <RefreshCw className={`w-4 h-4 text-purple-400 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
-              <span>{isCheckingUpdate ? 'Checking...' : 'Check for Updates (v1.0.3)'}</span>
+              <span>{isCheckingUpdate ? 'Checking...' : 'Check for Updates (v1.0.4)'}</span>
             </button>
           </div>
         </div>

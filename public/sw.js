@@ -2,7 +2,7 @@
 // VibeConnect — Service Worker with Auto-Update & Push Notifications
 // ==============================================================================
 
-const SW_VERSION = 'vibe-v1.0.3';
+const SW_VERSION = 'vibe-v1.0.4';
 
 self.addEventListener('install', (event) => {
   console.log('⚡ [SW] VibeConnect Service Worker installed:', SW_VERSION);

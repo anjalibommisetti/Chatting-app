@@ -67,6 +67,29 @@ export default function App() {
 
   // Auto-detect updates for mobile app & PWA
   useEffect(() => {
+    const CURRENT_VERSION = '1.0.4';
+
+    const checkForUpdates = async () => {
+      try {
+        const res = await fetch(`/version.json?_t=${Date.now()}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.version && data.version !== CURRENT_VERSION) {
+            console.log('⚡ [Update] New version detected:', data.version);
+            setUpdateAvailable(true);
+          }
+        }
+      } catch (err) {}
+    };
+
+    checkForUpdates();
+    const interval = setInterval(checkForUpdates, 25000);
+    window.addEventListener('focus', checkForUpdates);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkForUpdates();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const onMsg = (event) => {
         if (event.data?.type === 'SW_UPDATED') {
@@ -85,25 +108,95 @@ export default function App() {
           }
         }).catch(() => {});
       };
-
       checkSWUpdate();
-      const interval = setInterval(checkSWUpdate, 30000);
-      window.addEventListener('focus', checkSWUpdate);
 
       return () => {
         navigator.serviceWorker.removeEventListener('message', onMsg);
         clearInterval(interval);
-        window.removeEventListener('focus', checkSWUpdate);
+        window.removeEventListener('focus', checkForUpdates);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
       };
     }
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkForUpdates);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
-  // Auto-select first conversation on desktop if none selected
+  const handleApplyUpdate = async () => {
+    try {
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) await reg.unregister();
+      }
+    } catch (e) {}
+    window.location.reload(true);
+  };
+
+  // Auto-select first conversation ONLY on desktop/tablet screens (>= 768px)
   useEffect(() => {
-    if (currentUser && !activeConversationId && store.conversations.length > 0) {
-      setActiveConversationId(store.conversations[0].id);
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      if (currentUser && !activeConversationId && store.conversations.length > 0) {
+        setActiveConversationId(store.conversations[0].id);
+      }
     }
   }, [currentUser, activeConversationId]);
+
+  // Global hardware/gesture back button handler for Android and mobile web
+  useEffect(() => {
+    window.__handleAppBack = () => {
+      // 1. Close any open modal first
+      if (showNewChatByPhone) { setShowNewChatByPhone(false); return true; }
+      if (showCreateGroup) { setShowCreateGroup(false); return true; }
+      if (showJoinGroup) { setShowJoinGroup(false); return true; }
+      if (showGroupInfo) { setShowGroupInfo(false); return true; }
+      if (showQRModal) { setShowQRModal(false); return true; }
+
+      // 2. If active chat is open, close it and return to chat list
+      if (activeConversationId) {
+        setActiveConversationId(null);
+        return true;
+      }
+
+      // 3. If on another tab, return to chats tab
+      if (currentTab !== 'chats') {
+        setCurrentTab('chats');
+        return true;
+      }
+
+      // 4. Default: allow normal app exit
+      return false;
+    };
+
+    return () => {
+      delete window.__handleAppBack;
+    };
+  }, [
+    activeConversationId,
+    currentTab,
+    showNewChatByPhone,
+    showCreateGroup,
+    showJoinGroup,
+    showGroupInfo,
+    showQRModal
+  ]);
+
+  // Browser History popstate handler for swipe-back on mobile browsers
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activeConversationId) {
+        setActiveConversationId(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeConversationId]);
 
   // Check notification permission
   useEffect(() => {
@@ -153,7 +246,7 @@ export default function App() {
               </div>
             </div>
             <button
-              onClick={() => window.location.reload(true)}
+              onClick={handleApplyUpdate}
               className="px-3.5 py-1.5 rounded-xl bg-white text-purple-700 font-extrabold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
             >
               Update
@@ -239,7 +332,7 @@ export default function App() {
               </div>
             </div>
             <button
-              onClick={() => window.location.reload(true)}
+              onClick={handleApplyUpdate}
               className="px-3.5 py-1 rounded-lg bg-white text-purple-700 font-extrabold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
             >
               Update Now

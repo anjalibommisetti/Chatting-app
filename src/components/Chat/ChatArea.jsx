@@ -320,10 +320,15 @@ export default function ChatArea({
       <div className="h-18 px-4 sm:px-6 border-b border-[var(--border-color)] bg-[var(--bg-surface)] backdrop-blur-md flex items-center justify-between z-20 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={onBack}
-            className="md:hidden p-2 -ml-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors cursor-pointer"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onBack?.();
+            }}
+            aria-label="Back to chat list"
+            className="md:hidden p-2.5 -ml-2 mr-1 rounded-xl bg-purple-500/15 text-purple-300 hover:text-white hover:bg-purple-500/25 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-sm border border-purple-500/30"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
           </button>
 
           <div className="relative flex-shrink-0 cursor-pointer" onClick={onOpenInfo}>
