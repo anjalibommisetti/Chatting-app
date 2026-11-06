@@ -38,6 +38,7 @@ import ContactsView from './components/Contacts/ContactsView';
 import ProfileView from './components/Profile/ProfileView';
 import SettingsView from './components/Settings/SettingsView';
 import QRCodeModal from './components/Navigation/QRCodeModal';
+import OTAUpdateModal from './components/Navigation/OTAUpdateModal';
 
 export default function App() {
   const [, setTick] = useState(0);
@@ -57,6 +58,8 @@ export default function App() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [showOTAModal, setShowOTAModal] = useState(false);
+  const [latestVersion, setLatestVersion] = useState('1.0.5');
 
   // Subscribe to reactive store updates
   useEffect(() => {
@@ -75,8 +78,10 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           if (data.version && data.version !== CURRENT_VERSION) {
-            console.log('⚡ [Update] New version detected:', data.version);
+            console.log('⚡ [OTA Update] New version detected:', data.version);
+            setLatestVersion(data.version);
             setUpdateAvailable(true);
+            setShowOTAModal(true);
           }
         }
       } catch (err) {}
@@ -135,8 +140,11 @@ export default function App() {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) await reg.unregister();
       }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('vibe_cached_version');
+      }
     } catch (e) {}
-    window.location.reload(true);
+    window.location.href = `https://chatting-app-tan.vercel.app/?_ota=${Date.now()}`;
   };
 
   // Auto-select first conversation ONLY on desktop/tablet screens (>= 768px)
@@ -152,6 +160,7 @@ export default function App() {
   useEffect(() => {
     window.__handleAppBack = () => {
       // 1. Close any open modal first
+      if (showOTAModal) { setShowOTAModal(false); return true; }
       if (showNewChatByPhone) { setShowNewChatByPhone(false); return true; }
       if (showCreateGroup) { setShowCreateGroup(false); return true; }
       if (showJoinGroup) { setShowJoinGroup(false); return true; }
@@ -246,7 +255,7 @@ export default function App() {
               </div>
             </div>
             <button
-              onClick={handleApplyUpdate}
+              onClick={() => setShowOTAModal(true)}
               className="px-3.5 py-1.5 rounded-xl bg-white text-purple-700 font-extrabold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
             >
               Update
@@ -332,7 +341,7 @@ export default function App() {
               </div>
             </div>
             <button
-              onClick={handleApplyUpdate}
+              onClick={() => setShowOTAModal(true)}
               className="px-3.5 py-1 rounded-lg bg-white text-purple-700 font-extrabold text-xs shadow-md active:scale-95 transition-transform cursor-pointer"
             >
               Update Now
@@ -504,6 +513,14 @@ export default function App() {
             }
           }
         }}
+      />
+
+      {/* Over-The-Air (OTA) Auto-Updater Modal */}
+      <OTAUpdateModal
+        isOpen={showOTAModal}
+        newVersion={latestVersion}
+        onApplyUpdate={handleApplyUpdate}
+        onClose={() => setShowOTAModal(false)}
       />
     </div>
   );
