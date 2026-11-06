@@ -78,3 +78,4 @@ export default function OTAUpdateModal({ isOpen, newVersion, onApplyUpdate, onCl
     </div>
   );
 }
+
