@@ -79,7 +79,7 @@ export default function SettingsView({ onOpenQR }) {
       const res = await fetch(`/version.json?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (data.version && data.version !== '1.0.4') {
+        if (data.version && data.version !== '1.0.5') {
           showToast(`Updating to latest version ${data.version}...`);
           setTimeout(() => window.location.reload(true), 800);
           return;
@@ -438,7 +438,7 @@ export default function SettingsView({ onOpenQR }) {
               className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[var(--border-color)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all"
             >
               <RefreshCw className={`w-4 h-4 text-purple-400 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
-              <span>{isCheckingUpdate ? 'Checking...' : 'Check for Updates (v1.0.4)'}</span>
+              <span>{isCheckingUpdate ? 'Checking...' : 'Check for Updates (v1.0.5)'}</span>
             </button>
           </div>
         </div>

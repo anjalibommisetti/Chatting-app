@@ -67,7 +67,7 @@ export default function App() {
 
   // Auto-detect updates for mobile app & PWA
   useEffect(() => {
-    const CURRENT_VERSION = '1.0.4';
+    const CURRENT_VERSION = '1.0.5';
 
     const checkForUpdates = async () => {
       try {

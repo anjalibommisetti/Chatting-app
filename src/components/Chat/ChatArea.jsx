@@ -466,22 +466,24 @@ export default function ChatArea({
                 </div>
               )}
 
-              <div className={`w-full flex flex-col ${isSelf ? 'items-end' : 'items-start'} group relative my-1`}>
-                {/* Group Sender Name */}
-                {isGroup && !isSelf && (
-                  <span className="text-[11px] font-semibold text-purple-400 ml-9 mb-1">
-                    {senderDisplayName}
-                  </span>
-                )}
-
+              <div className={`w-full flex ${isSelf ? 'justify-end' : 'justify-start'} group relative my-1 px-1`}>
                 <div className={`flex items-end gap-1.5 max-w-[85%] sm:max-w-[70%] ${isSelf ? 'flex-row-reverse' : 'flex-row'}`}>
-                  {/* Avatar */}
-                  <div className="w-7 h-7 rounded-full bg-white/5 border border-[var(--border-color)] flex items-center justify-center text-sm flex-shrink-0 mb-0.5 select-none">
-                    {sender?.avatar || '👤'}
-                  </div>
+                  {/* Group Sender Avatar (only shown in group chats for other members) */}
+                  {isGroup && !isSelf && (
+                    <div className="w-7 h-7 rounded-full bg-white/5 border border-[var(--border-color)] flex items-center justify-center text-sm flex-shrink-0 mb-0.5 select-none" title={senderDisplayName}>
+                      {sender?.avatar || '👤'}
+                    </div>
+                  )}
 
                   {/* Message Bubble Block */}
-                  <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'} min-w-0`}>
+                  <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'} max-w-full`}>
+                    {/* Group Sender Name */}
+                    {isGroup && !isSelf && (
+                      <span className="text-[11px] font-semibold text-purple-400 mb-0.5 px-1">
+                        {senderDisplayName}
+                      </span>
+                    )}
+
                     {/* Quoted Reply Preview */}
                     {repliedMsg && (
                       <div className="text-[11px] px-3 py-1.5 rounded-xl bg-black/20 border-l-2 border-purple-500 text-[var(--text-muted)] truncate max-w-xs mb-1">
@@ -519,15 +521,15 @@ export default function ChatArea({
                       </div>
                     ) : (
                       <div
-                        className={`px-4 py-2.5 rounded-2xl text-sm relative shadow-sm transition-all message-bubble max-w-full inline-block ${
+                        className={`px-3.5 py-2 rounded-2xl text-[14px] leading-snug relative shadow-md transition-all message-bubble w-fit min-w-[70px] max-w-full ${
                           isSelf
                             ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-br-xs'
-                            : 'bg-[#191e32] border border-white/10 text-slate-100 rounded-bl-xs'
+                            : 'bg-[#181d2f] border border-white/10 text-slate-100 rounded-bl-xs'
                         }`}
                       >
                         {/* View-Once Photo Bubble */}
                         {msg.isViewOnce ? (
-                          <div className="my-1.5 max-w-xs">
+                          <div className="my-1 max-w-xs">
                             {isSelf ? (
                               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-900/40 border border-purple-500/30 text-purple-200 text-xs">
                                 <span className="w-7 h-7 rounded-full bg-purple-500/30 border border-purple-400/40 flex items-center justify-center font-bold text-sm flex-shrink-0">
@@ -535,7 +537,7 @@ export default function ChatArea({
                                 </span>
                                 <div className="text-left">
                                   <span className="font-semibold block">{msg.isOpened ? '✓ Photo Opened' : 'View-Once Photo Sent'}</span>
-                                  <span className="text-[10px] text-purple-300/80">{msg.isOpened ? 'Partner viewed and burned photo' : 'Vandishes after viewing'}</span>
+                                  <span className="text-[10px] text-purple-300/80">{msg.isOpened ? 'Partner viewed and burned photo' : 'Vanishes after viewing'}</span>
                                 </div>
                               </div>
                             ) : (
@@ -598,48 +600,50 @@ export default function ChatArea({
                           )
                         )}
 
-                        {/* Message Text */}
-                        {msg.text && (
-                          <p className={`leading-relaxed whitespace-pre-wrap break-words select-text ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
-                            {msg.text}
-                          </p>
-                        )}
-
-                        {/* Meta: Timestamp, Edited tag, Delivery status */}
-                        <div className={`flex items-center justify-end gap-1.5 mt-0.5 text-[10px] ${isSelf ? 'text-purple-200/80' : 'text-slate-400'}`}>
-                          {msg.isEdited && <span>(edited)</span>}
-                          <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-
-                          {/* WhatsApp / Telegram Status Ticks for Sent Messages */}
-                          {isSelf && (
-                            <span className="flex items-center">
-                              {msg.status === 'sending' && (
-                                <Clock className="w-3 h-3 text-purple-200/60 animate-spin" />
-                              )}
-                              {msg.status === 'sent' && (
-                                <Check className="w-3.5 h-3.5 text-purple-200/70" title="Sent to server" />
-                              )}
-                              {msg.status === 'delivered' && (
-                                <CheckCheck className="w-3.5 h-3.5 text-purple-200" title="Delivered to partner" />
-                              )}
-                              {msg.status === 'read' && (
-                                <CheckCheck className="w-3.5 h-3.5 text-cyan-300" title="Read" />
-                              )}
-                              {msg.status === 'failed' && (
-                                <span className="flex items-center gap-1 text-rose-300 font-bold">
-                                  <AlertCircle className="w-3 h-3" />
-                                  <span>Failed</span>
-                                </span>
-                              )}
+                        {/* Message Text and Timestamp container (WhatsApp / Telegram style inline flow) */}
+                        <div className="flex flex-wrap items-end justify-end gap-x-2.5 gap-y-0.5">
+                          {msg.text && (
+                            <span className={`leading-relaxed break-words select-text text-left ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
+                              {msg.text}
                             </span>
                           )}
+
+                          {/* Meta: Timestamp, Edited tag, Delivery status */}
+                          <span className={`inline-flex items-center gap-1 text-[10px] select-none ml-auto self-end whitespace-nowrap pt-0.5 ${isSelf ? 'text-purple-200/80' : 'text-slate-400'}`}>
+                            {msg.isEdited && <span>(edited)</span>}
+                            <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+
+                            {/* WhatsApp / Telegram Status Ticks for Sent Messages */}
+                            {isSelf && (
+                              <span className="inline-flex items-center ml-0.5">
+                                {msg.status === 'sending' && (
+                                  <Clock className="w-3 h-3 text-purple-200/60 animate-spin" />
+                                )}
+                                {msg.status === 'sent' && (
+                                  <Check className="w-3.5 h-3.5 text-purple-200/70" title="Sent to server" />
+                                )}
+                                {msg.status === 'delivered' && (
+                                  <CheckCheck className="w-3.5 h-3.5 text-purple-200" title="Delivered to partner" />
+                                )}
+                                {msg.status === 'read' && (
+                                  <CheckCheck className="w-3.5 h-3.5 text-cyan-300" title="Read" />
+                                )}
+                                {msg.status === 'failed' && (
+                                  <span className="inline-flex items-center gap-1 text-rose-300 font-bold">
+                                    <AlertCircle className="w-3 h-3" />
+                                    <span>Failed</span>
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </span>
                         </div>
                       </div>
                     )}
 
                     {/* Reactions Display */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap mt-1">
+                      <div className={`flex items-center gap-1 flex-wrap mt-1 ${isSelf ? 'justify-end' : 'justify-start'}`}>
                         {Object.entries(msg.reactions).map(([emoji, userIds]) => (
                           <button
                             key={emoji}
